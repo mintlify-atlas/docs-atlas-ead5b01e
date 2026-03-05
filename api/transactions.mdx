@@ -1,0 +1,345 @@
+---
+title: Transactions API
+description: API endpoints for managing financial transactions
+---
+
+The Transactions API allows you to create, update, delete, and retrieve financial transactions including income, expenses, and transfers.
+
+## create
+
+Create a new transaction.
+
+```typescript
+await client.transactions.create({
+  amount: "100.00",
+  bankAccountId: "account-id",
+  categoryId: "category-id",
+  currency: "USD",
+  date: new Date("2024-03-01"),
+  description: "Grocery shopping",
+  type: "EXPENSE"
+})
+```
+
+### Parameters
+
+<ParamField path="amount" type="string" required>
+  Transaction amount as a string numeric literal (e.g., "100.00")
+</ParamField>
+
+<ParamField path="bankAccountId" type="string">
+  ID of the bank account for this transaction
+</ParamField>
+
+<ParamField path="categoryId" type="string">
+  ID of the category for this transaction
+</ParamField>
+
+<ParamField path="currency" type="CurrencyCode" required>
+  Currency code (e.g., "USD", "EUR", "GBP")
+</ParamField>
+
+<ParamField path="date" type="Date" required>
+  Date of the transaction
+</ParamField>
+
+<ParamField path="description" type="string" required>
+  Description of the transaction
+</ParamField>
+
+<ParamField path="type" type="enum" required>
+  Transaction type: `INCOME`, `EXPENSE`, or `TRANSFER`
+</ParamField>
+
+<ParamField path="notes" type="string">
+  Optional notes about the transaction
+</ParamField>
+
+<ParamField path="tags" type="string[]">
+  Optional array of tags for categorization
+</ParamField>
+
+<ParamField path="externalId" type="string">
+  Optional external ID for tracking imported transactions
+</ParamField>
+
+<ParamField path="groupId" type="string">
+  Optional group ID for organizing transactions
+</ParamField>
+
+<ParamField path="fromBankAccountId" type="string">
+  Source bank account ID (only for TRANSFER transactions)
+</ParamField>
+
+<ParamField path="toBankAccountId" type="string">
+  Destination bank account ID (only for TRANSFER transactions)
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Unique identifier for the transaction
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  Transaction amount
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Currency code
+</ResponseField>
+
+<ResponseField name="date" type="Date">
+  Transaction date
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Transaction description
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Transaction type
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Timestamp when the transaction was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Timestamp when the transaction was last updated
+</ResponseField>
+
+## createMany
+
+Create multiple transactions in a single request.
+
+```typescript
+await client.transactions.createMany([
+  {
+    amount: "50.00",
+    currency: "USD",
+    date: new Date("2024-03-01"),
+    description: "Coffee",
+    type: "EXPENSE"
+  },
+  {
+    amount: "1000.00",
+    currency: "USD",
+    date: new Date("2024-03-01"),
+    description: "Salary",
+    type: "INCOME"
+  }
+])
+```
+
+### Parameters
+
+<ParamField path="transactions" type="array" required>
+  Array of transaction objects (minimum 1 item). Each transaction object has the same structure as the `create` endpoint parameters.
+</ParamField>
+
+### Response
+
+Returns an array of created transaction objects.
+
+## update
+
+Update an existing transaction.
+
+```typescript
+await client.transactions.update({
+  id: "transaction-id",
+  amount: "150.00",
+  description: "Updated grocery shopping",
+  categoryId: "new-category-id"
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  ID of the transaction to update
+</ParamField>
+
+All other fields from the `create` endpoint are optional and can be updated.
+
+### Response
+
+Returns the updated transaction object.
+
+## delete
+
+Delete a transaction.
+
+```typescript
+await client.transactions.delete({
+  id: "transaction-id"
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  ID of the transaction to delete
+</ParamField>
+
+### Response
+
+Returns the deleted transaction object.
+
+## deleteMany
+
+Delete multiple transactions.
+
+```typescript
+await client.transactions.deleteMany([
+  { id: "transaction-id-1" },
+  { id: "transaction-id-2" }
+])
+```
+
+### Parameters
+
+<ParamField path="transactions" type="array" required>
+  Array of objects with `id` field (minimum 1 item)
+</ParamField>
+
+### Response
+
+Returns information about the deleted transactions.
+
+## getByDateRange
+
+Retrieve transactions within a date range.
+
+```typescript
+await client.transactions.getByDateRange({
+  from: new Date("2024-01-01"),
+  to: new Date("2024-03-31")
+})
+```
+
+### Parameters
+
+<ParamField path="from" type="Date" required>
+  Start date of the range
+</ParamField>
+
+<ParamField path="to" type="Date" required>
+  End date of the range
+</ParamField>
+
+### Response
+
+Returns an array of transactions within the specified date range.
+
+## getByCategory
+
+Retrieve transactions for a specific category within a date range.
+
+```typescript
+await client.transactions.getByCategory({
+  categoryId: "category-id",
+  from: new Date("2024-01-01"),
+  to: new Date("2024-03-31")
+})
+```
+
+### Parameters
+
+<ParamField path="categoryId" type="string" required>
+  ID of the category to filter by
+</ParamField>
+
+<ParamField path="from" type="Date" required>
+  Start date of the range
+</ParamField>
+
+<ParamField path="to" type="Date" required>
+  End date of the range
+</ParamField>
+
+### Response
+
+Returns an array of transactions for the specified category and date range.
+
+## parseOFX
+
+Parse and import transactions from OFX/QFX files.
+
+```typescript
+await client.transactions.parseOFX({
+  bankAccountId: "account-id",
+  files: [ofxFile1, ofxFile2],
+  shouldAutoCategorize: true,
+  groupId: "import-group-id"
+})
+```
+
+### Parameters
+
+<ParamField path="bankAccountId" type="string" required>
+  ID of the bank account to associate imported transactions with
+</ParamField>
+
+<ParamField path="files" type="File[]" required>
+  Array of OFX or QFX files to parse (minimum 1 file). Files must have `.ofx` or `.qfx` extension.
+</ParamField>
+
+<ParamField path="shouldAutoCategorize" type="boolean" required>
+  Whether to automatically categorize imported transactions
+</ParamField>
+
+<ParamField path="groupId" type="string">
+  Optional group ID to organize imported transactions
+</ParamField>
+
+### Response
+
+<ResponseField name="transactions" type="array">
+  Array of imported transactions, sorted by date (newest first)
+</ResponseField>
+
+<ResponseField name="baseCurrency" type="string">
+  Base currency code used for the import
+</ResponseField>
+
+<ResponseField name="convertedCurrencies" type="string[]">
+  Array of currency codes that were converted during import
+</ResponseField>
+
+<ResponseField name="currencyExchangeAttribution" type="object">
+  Attribution information for currency exchange rates used
+</ResponseField>
+
+## TypeScript Types
+
+```typescript
+type Transaction = {
+  id: string
+  externalId: string | null
+  createdAt: Date
+  updatedAt: Date
+  type: "INCOME" | "EXPENSE" | "TRANSFER"
+  date: Date
+  amount: Intl.StringNumericLiteral
+  currency: CurrencyCode
+  description: string
+  notes: string | null
+  tags: string[] | null
+  bankAccountId: string | null
+  fromBankAccountId: string | null
+  toBankAccountId: string | null
+  categoryId: string | null
+  groupId: string | null
+  userId: string
+}
+
+type TransactionWithRelations = Transaction & {
+  bankAccount: BankAccount | null
+  fromBankAccount: BankAccount | null
+  toBankAccount: BankAccount | null
+  category: (Category & { parent: Category | null }) | null
+  group: Group | null
+}
+```

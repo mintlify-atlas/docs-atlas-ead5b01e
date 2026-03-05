@@ -1,0 +1,189 @@
+---
+title: Local Setup
+description: Get Budgetron running on your local machine for development
+---
+
+This guide walks you through setting up Budgetron locally for development.
+
+## Prerequisites
+
+- **Node.js** - Version specified in `.node-version` (check the file for the exact version)
+- **pnpm** - Version 10.30.3 or higher
+- **PostgreSQL** - Version 12 or higher
+- **Git** - For cloning the repository
+
+## Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/raghavan-dev/budgetron.git
+cd budgetron
+```
+
+## Step 2: Install Dependencies
+
+Budgetron uses pnpm as its package manager:
+
+```bash
+pnpm install
+```
+
+This will install all dependencies defined in `package.json`.
+
+## Step 3: Set Up PostgreSQL
+
+You'll need a running PostgreSQL instance. You can either:
+
+### Option A: Local PostgreSQL
+
+Install PostgreSQL locally and create a database:
+
+```bash
+creatdb budgetron
+```
+
+### Option B: Docker PostgreSQL
+
+Run PostgreSQL in a container:
+
+```bash
+docker run -d \
+  --name budgetron-db \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=budgetron \
+  -p 5432:5432 \
+  postgres:16
+```
+
+## Step 4: Configure Environment Variables
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and provide the required values:
+
+### Required Variables
+
+```bash
+# Database connection string
+DB_URL=postgres://postgres:postgres@localhost:5432/budgetron
+
+# Authentication
+AUTH_SECRET=your-random-secret-here  # Generate with: openssl rand -base64 32
+AUTH_URL=http://localhost:3000
+
+# Cron job security
+CRON_SECRET_SLUG=your-cron-slug
+CRON_SECRET_TOKEN=your-cron-token  # Generate with: openssl rand -base64 32
+```
+
+### Optional Variables
+
+For full functionality, you can also configure:
+
+- **Google OAuth** - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- **Custom OAuth** - `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, etc.
+- **AI Categorization** - `OPENAI_COMPATIBLE_PROVIDER`, `OPENAI_COMPATIBLE_BASE_URL`, etc.
+- **Email Service** - `EMAIL_PROVIDER_API_KEY`, `EMAIL_PROVIDER_FROM_EMAIL`
+- **Blob Storage** - `BLOB_READ_WRITE_TOKEN`
+
+See [Environment Variables](/introduction#environment-variables) for details.
+
+## Step 5: Run Database Migrations
+
+Apply the database schema:
+
+```bash
+pnpm run db:migrate
+```
+
+This runs `drizzle-kit migrate` to create all necessary tables.
+
+## Step 6: Start the Development Server
+
+```bash
+pnpm dev
+```
+
+The application will start on [http://localhost:3000](http://localhost:3000) with Turbopack for fast refresh.
+
+## Common npm Scripts
+
+Here are the most useful commands for development:
+
+### Development
+
+- `pnpm dev` - Start development server with Turbopack
+- `pnpm build` - Build production bundle
+- `pnpm start` - Start production server (requires build first)
+- `pnpm lint` - Run ESLint
+- `pnpm format` - Format code with Prettier
+
+### Database
+
+- `pnpm run db:migrate` - Apply pending migrations
+- `pnpm run db:push` - Push schema changes directly (dev only)
+- `pnpm run db:generate` - Generate new migration from schema changes
+- `pnpm run db:studio` - Open Drizzle Studio (database GUI)
+
+### Development Environment Variants
+
+For working with a separate development environment:
+
+- `pnpm run db:migrate:dev` - Migrate using `.env.development`
+- `pnpm run db:push:dev` - Push using `.env.development`
+- `pnpm run db:generate:dev` - Generate using `.env.development`
+- `pnpm run db:studio:dev` - Studio using `.env.development`
+
+### Email Development
+
+- `pnpm run email:dev` - Preview email templates at [http://localhost:3001](http://localhost:3001)
+
+### UI Components
+
+- `pnpm run add-ui` - Add shadcn/ui components (e.g., `pnpm run add-ui button`)
+
+## Verify Your Setup
+
+After starting the dev server:
+
+1. Navigate to [http://localhost:3000](http://localhost:3000)
+2. You should see the landing page
+3. Click **Sign Up** to create an account
+4. After signing in, you should see the dashboard
+
+## Troubleshooting
+
+### Database Connection Issues
+
+If you see database connection errors:
+
+1. Verify PostgreSQL is running: `pg_isready`
+2. Check your `DB_URL` in `.env`
+3. Ensure the database exists: `psql -l | grep budgetron`
+
+### Migration Errors
+
+If migrations fail:
+
+1. Check the database is accessible
+2. Verify the `__drizzle_migrations` table exists
+3. Try running migrations manually from `drizzle/migrations/`
+
+### Port Already in Use
+
+If port 3000 is occupied:
+
+```bash
+pnpm dev -- -p 3001  # Use a different port
+```
+
+Don't forget to update `AUTH_URL` in `.env`.
+
+## Next Steps
+
+- Read about the [Project Structure](/development/project-structure) to understand the codebase
+- Learn how to work with [Database Migrations](/development/database-migrations)
+- Check the [Contributing Guide](/development/contributing) before making changes

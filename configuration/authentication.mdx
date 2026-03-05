@@ -1,0 +1,217 @@
+---
+title: Authentication
+description: Configure authentication providers and security settings
+---
+
+Budgetron uses [BetterAuth](https://www.better-auth.com/) for authentication, supporting multiple sign-in methods including email/password, Google OAuth, and custom OAuth providers.
+
+## Core Authentication Settings
+
+<ParamField path="AUTH_SECRET" type="string" required>
+  Secret key used for JWT session encryption and signing. Must be a strong, randomly generated string.
+  
+  **Example:** `your-super-secret-key-here`
+  
+  **Generation:**
+  ```bash
+  openssl rand -base64 32
+  ```
+</ParamField>
+
+<ParamField path="AUTH_URL" type="string" required>
+  The public URL where your application is hosted. Used for OAuth redirects and email links.
+  
+  **Example:** `https://app.example.com` or `http://localhost:3000` (for development)
+  
+  **Note:** Must include the protocol (`http://` or `https://`) and should not have a trailing slash.
+</ParamField>
+
+## Email and Password Authentication
+
+Email and password authentication is **enabled by default** and requires no additional configuration. Users can sign up with email and password, and receive password reset emails if the email service is configured.
+
+### Features
+
+- Auto sign-in after successful registration
+- Password reset via email (requires [email configuration](/configuration/email))
+- Email verification after sign-up
+- Account deletion with email confirmation
+
+### Token Expiration
+
+| Token Type | Validity |
+| --- | --- |
+| Password Reset | 15 minutes |
+| Email Verification | 15 minutes |
+| Account Deletion | 15 minutes |
+
+These values are configured in `src/server/auth/config.ts`.
+
+## Google Sign-In
+
+<Info>
+  Google Sign-In is **optional**. If not configured, users can still sign in with email and password.
+</Info>
+
+<ParamField path="GOOGLE_CLIENT_ID" type="string">
+  Google OAuth 2.0 client ID from your Google Cloud Console project.
+  
+  **Example:** `123456789-abcdef.apps.googleusercontent.com`
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_SECRET" type="string">
+  Google OAuth 2.0 client secret from your Google Cloud Console project.
+  
+  **Example:** `GOCSPX-abc123def456`
+</ParamField>
+
+### Setting Up Google Sign-In
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Navigate to **APIs & Services** → **Credentials**
+4. Create **OAuth 2.0 Client ID**
+5. Add authorized redirect URIs:
+   - `https://your-domain.com/api/auth/callback/google` (production)
+   - `http://localhost:3000/api/auth/callback/google` (development)
+6. Copy the **Client ID** and **Client Secret**
+
+### Google Sign-In Configuration
+
+When enabled, Google Sign-In:
+- Disables implicit sign-up (users must be invited first)
+- Shows account selector on every sign-in
+- Automatically uses the user's Google profile picture
+- Assigns the default user role from the database schema
+
+## Custom OAuth Provider
+
+<Info>
+  Custom OAuth is **optional** and designed for enterprise single sign-on (SSO) integration.
+</Info>
+
+Budgetron supports any OpenID Connect-compatible OAuth provider for SSO.
+
+<ParamField path="OAUTH_CLIENT_ID" type="string">
+  OAuth 2.0 client ID from your identity provider.
+  
+  **Example:** `my-app-client-id`
+</ParamField>
+
+<ParamField path="OAUTH_CLIENT_SECRET" type="string">
+  OAuth 2.0 client secret from your identity provider.
+  
+  **Example:** `my-app-client-secret`
+</ParamField>
+
+<ParamField path="OAUTH_PROVIDER_NAME" type="string">
+  Display name for your OAuth provider shown in the UI.
+  
+  **Example:** `My Company SSO`, `Okta`, `Auth0`
+</ParamField>
+
+<ParamField path="OPENID_CONFIGURATION_URL" type="string">
+  OpenID Connect discovery URL for your identity provider.
+  
+  **Example:** `https://accounts.example.com/.well-known/openid-configuration`
+  
+  **Note:** Most OAuth providers expose this endpoint for automatic configuration.
+</ParamField>
+
+### Custom OAuth Configuration
+
+The custom OAuth implementation:
+- Supports any OpenID Connect-compatible provider
+- Disables implicit sign-up (users must exist in the system)
+- Maps profile fields (`email`, `name`, `picture`, `avatar`, `image`)
+- Falls back to Gravatar for profile pictures if none provided
+- Uses SHA-256 hash of email for Gravatar lookup
+
+### Supported Identity Providers
+
+Any OpenID Connect-compatible provider works, including:
+- **Okta**
+- **Auth0**
+- **Keycloak**
+- **Azure AD / Microsoft Entra ID**
+- **Google Workspace** (use Google Sign-In instead)
+- **Custom identity servers**
+
+### Profile Mapping
+
+The OAuth profile is mapped to Budgetron user fields:
+
+| OAuth Field | Budgetron Field | Fallback |
+| --- | --- | --- |
+| `id` | User ID | Required |
+| `name` | Display Name | Required |
+| `email` | Email Address | Required |
+| `email_verified` or `emailVerified` | Email Verified | `false` |
+| `picture`, `avatar`, or `image` | Profile Picture | Gravatar |
+
+## Authentication Database Schema
+
+Budgetron uses the following tables for authentication (managed by BetterAuth):
+
+| Table | Purpose |
+| --- | --- |
+| `user` | User accounts and profiles |
+| `account` | OAuth provider connections |
+| `session` | Active user sessions |
+| `verification` | Email verification and reset tokens |
+
+### Account Linking
+
+Account linking is **enabled** and allows:
+- Linking multiple OAuth providers to one account
+- Different email addresses across providers
+- Seamless switching between sign-in methods
+
+This is configured in `src/server/auth/config.ts:59`.
+
+## Database Hooks
+
+### Welcome Email
+
+When a new user is created, a welcome email is automatically sent (if email service is configured). This happens in the `databaseHooks.user.create.after` hook.
+
+See `src/server/auth/config.ts:149` for implementation details.
+
+## Security Features
+
+<Check>
+  All authentication tokens expire after 15 minutes for security.
+</Check>
+
+- **Session encryption:** JWT sessions signed with `AUTH_SECRET`
+- **Password hashing:** Automatic password hashing by BetterAuth
+- **Token expiration:** All verification tokens expire in 15 minutes
+- **CSRF protection:** Built-in CSRF protection for all auth endpoints
+- **Cookie security:** Secure, HTTP-only cookies in production
+
+## Troubleshooting
+
+### Google Sign-In Not Working
+
+- Verify redirect URIs match exactly in Google Cloud Console
+- Check that `AUTH_URL` matches your application domain
+- Ensure both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set
+
+### Custom OAuth Not Working
+
+- Verify the OpenID configuration URL is accessible
+- Check that all four OAuth variables are set
+- Test the discovery endpoint returns valid JSON
+- Verify redirect URIs in your identity provider: `{AUTH_URL}/api/auth/callback/custom-oauth-provider`
+
+### Email Verification Not Sent
+
+- Verify [email service](/configuration/email) is configured
+- Check email provider credentials are valid
+- Look for errors in application logs
+
+## Related Configuration
+
+- [Email Configuration](/configuration/email) - Required for password reset and account deletion
+- [Environment Variables](/configuration/environment-variables) - Complete environment reference
+- [Database Configuration](/configuration/database) - Database connection setup

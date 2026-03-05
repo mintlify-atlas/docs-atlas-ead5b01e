@@ -1,0 +1,518 @@
+---
+title: Installation
+description: Comprehensive guide to installing and deploying Budgetron using Docker or manual setup
+---
+
+# Installation Guide
+
+This guide covers all installation methods for Budgetron, from Docker deployments to manual setup. Choose the method that best fits your infrastructure and requirements.
+
+## Prerequisites
+
+### System Requirements
+
+<CardGroup cols={2}>
+  <Card title="For Docker Installation">
+    - Docker 20.10 or later
+    - Docker Compose (optional)
+    - 2GB RAM minimum
+    - 5GB disk space
+  </Card>
+  
+  <Card title="For Manual Installation">
+    - Node.js 18+ (Alpine compatible)
+    - pnpm 10.30.3 or later
+    - 2GB RAM minimum
+    - 10GB disk space
+  </Card>
+</CardGroup>
+
+### Required Services
+
+<Warning>
+  Budgetron requires a PostgreSQL database. Ensure you have access to a PostgreSQL instance before proceeding.
+</Warning>
+
+- **PostgreSQL 14+** with CREATE TABLE permissions
+- **Network access** to the database from your Budgetron instance
+
+### Optional Services
+
+These services enable additional features:
+
+- **Ollama** or **OpenAI-compatible API** - For AI transaction categorization
+- **Email service** (e.g., Resend) - For password resets and notifications
+- **Vercel Blob** or S3-compatible storage - For profile picture uploads
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Docker (Recommended)">
+    ## Docker Installation
+    
+    Docker provides the simplest and most reliable way to deploy Budgetron.
+    
+    ### Step 1: Clone the Repository
+    
+    ```bash
+    git clone https://github.com/raghavan-dev/budgetron.git
+    cd budgetron
+    ```
+    
+    ### Step 2: Configure Environment
+    
+    Create your environment configuration:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit `.env` with your settings:
+    
+    ```bash .env
+    # Authentication (Required)
+    AUTH_SECRET="your-secret-key-here"  # Generate: openssl rand -base64 32
+    AUTH_URL="https://budgetron.yourdomain.com"
+    
+    # Database (Required)
+    DB_URL="postgresql://budgetron:password@postgres:5432/budgetron"
+    
+    # Cron Jobs (Required)
+    CRON_SECRET_SLUG="sync-currency-rates"
+    CRON_SECRET_TOKEN="your-secure-cron-token"
+    
+    # Google OAuth (Optional)
+    GOOGLE_CLIENT_ID=""
+    GOOGLE_CLIENT_SECRET=""
+    
+    # Custom OAuth (Optional)
+    OAUTH_CLIENT_ID=""
+    OAUTH_CLIENT_SECRET=""
+    OAUTH_PROVIDER_NAME=""
+    OPENID_CONFIGURATION_URL=""
+    
+    # AI Provider (Optional)
+    OPENAI_COMPATIBLE_PROVIDER="ollama"
+    OPENAI_COMPATIBLE_BASE_URL="http://ollama:11434/v1"
+    OPENAI_COMPATIBLE_API_KEY="ollama"
+    OPENAI_COMPATIBLE_MODEL="llama3"
+    
+    # Email (Optional)
+    EMAIL_PROVIDER_API_KEY=""
+    EMAIL_PROVIDER_FROM_EMAIL="noreply@yourdomain.com"
+    
+    # Blob Storage (Optional)
+    BLOB_READ_WRITE_TOKEN=""
+    ```
+    
+    <Tip>
+      For production deployments, use a secrets management solution instead of plain text `.env` files.
+    </Tip>
+    
+    ### Step 3: Build the Image
+    
+    Build the Budgetron Docker image:
+    
+    ```bash
+    docker build -t budgetron .
+    ```
+    
+    The Dockerfile uses a multi-stage build process:
+    
+    1. **Base stage**: Sets up Node Alpine with PostgreSQL client
+    2. **Dependencies stage**: Installs all dependencies with pnpm
+    3. **Builder stage**: Compiles Next.js and migration tooling
+    4. **Runner stage**: Creates minimal production image
+    
+    <Note>
+      The build process includes `gcompat` for Alpine compatibility and `postgresql-client` for database health checks.
+    </Note>
+    
+    ### Step 4: Run the Container
+    
+    Start Budgetron with your environment configuration:
+    
+    ```bash
+    docker run -d \
+      --name budgetron \
+      --env-file .env \
+      -p 3000:3000 \
+      --restart unless-stopped \
+      budgetron
+    ```
+    
+    <Accordion title="Advanced Docker Options">
+      **Custom Port:**
+      ```bash
+      docker run -d \
+        --name budgetron \
+        --env-file .env \
+        -p 8080:3000 \
+        budgetron
+      ```
+      
+      **Custom Database Wait Timeout:**
+      ```bash
+      docker run -d \
+        --name budgetron \
+        --env-file .env \
+        -e MAX_WAIT=60 \
+        -p 3000:3000 \
+        budgetron
+      ```
+      
+      **Mount Logs Volume:**
+      ```bash
+      docker run -d \
+        --name budgetron \
+        --env-file .env \
+        -v budgetron-logs:/app/.next/logs \
+        -p 3000:3000 \
+        budgetron
+      ```
+    </Accordion>
+    
+    ### Step 5: Verify Deployment
+    
+    Check container health:
+    
+    ```bash
+    docker logs -f budgetron
+    ```
+    
+    Expected output:
+    
+    ```
+    ⏳ Waiting for database using DB_URL...
+    📦 Running DB migration...
+    ✅ DB migration completed.
+    🚀 Starting server...
+    ```
+    
+    Test the application:
+    
+    ```bash
+    curl http://localhost:3000
+    ```
+    
+    <Check>
+      If you see HTML content, Budgetron is running successfully!
+    </Check>
+  </Tab>
+  
+  <Tab title="Manual Setup">
+    ## Manual Installation
+    
+    For development or custom deployments without Docker.
+    
+    ### Step 1: Install Dependencies
+    
+    Ensure you have the required tools:
+    
+    ```bash
+    # Check Node.js version (requires 18+)
+    node --version
+    
+    # Install pnpm if not already installed
+    npm install -g pnpm@10.30.3
+    ```
+    
+    ### Step 2: Clone and Install
+    
+    ```bash
+    # Clone repository
+    git clone https://github.com/raghavan-dev/budgetron.git
+    cd budgetron
+    
+    # Install dependencies
+    pnpm install
+    ```
+    
+    <Note>
+      The installation uses pnpm workspaces and includes both the main app and migration tooling.
+    </Note>
+    
+    ### Step 3: Configure Environment
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit `.env` with your configuration (same as Docker setup above).
+    
+    ### Step 4: Set Up Database
+    
+    Run database migrations:
+    
+    ```bash
+    pnpm run db:migrate
+    ```
+    
+    This applies all Drizzle ORM migrations to your PostgreSQL database.
+    
+    <Tip>
+      For development with a separate database:
+      ```bash
+      pnpm run db:migrate:dev
+      ```
+    </Tip>
+    
+    ### Step 5: Build for Production
+    
+    ```bash
+    # Build Next.js application
+    pnpm run build
+    ```
+    
+    The build process:
+    - Compiles TypeScript
+    - Generates optimized Next.js bundles
+    - Creates standalone server output
+    
+    ### Step 6: Start the Server
+    
+    ```bash
+    # Production mode
+    pnpm start
+    ```
+    
+    Or for development:
+    
+    ```bash
+    # Development mode with hot reload
+    pnpm dev
+    ```
+    
+    <Check>
+      Access Budgetron at http://localhost:3000
+    </Check>
+  </Tab>
+</Tabs>
+
+## Database Setup
+
+### Creating the Database
+
+Connect to your PostgreSQL server and create the database:
+
+```sql
+CREATE DATABASE budgetron;
+CREATE USER budgetron WITH PASSWORD 'your-secure-password';
+GRANT ALL PRIVILEGES ON DATABASE budgetron TO budgetron;
+```
+
+### Connection String Format
+
+The `DB_URL` environment variable should follow this format:
+
+```
+postgresql://[user]:[password]@[host]:[port]/[database]
+```
+
+<CodeGroup>
+  ```bash Local PostgreSQL
+  DB_URL="postgresql://budgetron:password@localhost:5432/budgetron"
+  ```
+  
+  ```bash Docker Network
+  DB_URL="postgresql://budgetron:password@postgres:5432/budgetron"
+  ```
+  
+  ```bash Hosted Database
+  DB_URL="postgresql://user:pass@db.example.com:5432/budgetron?sslmode=require"
+  ```
+</CodeGroup>
+
+<Warning>
+  Always use SSL connections (`?sslmode=require`) for hosted databases in production.
+</Warning>
+
+### Migration Management
+
+Budgetron uses Drizzle ORM for database migrations:
+
+```bash
+# Generate new migration
+pnpm run db:generate
+
+# Apply migrations
+pnpm run db:migrate
+
+# Open Drizzle Studio (database GUI)
+pnpm run db:studio
+```
+
+<Note>
+  In Docker deployments, migrations run automatically on container startup via the `entrypoint.sh` script.
+</Note>
+
+## Post-Installation Configuration
+
+### Setting Up AI Categorization
+
+For local AI processing with Ollama:
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull LLaMA 3 model
+ollama pull llama3
+
+# Configure Budgetron
+OPENAI_COMPATIBLE_PROVIDER="ollama"
+OPENAI_COMPATIBLE_BASE_URL="http://localhost:11434/v1"
+OPENAI_COMPATIBLE_API_KEY="ollama"
+OPENAI_COMPATIBLE_MODEL="llama3"
+```
+
+<Tip>
+  Other supported models include `mixtral`, `mistral`, and any OpenAI-compatible API.
+</Tip>
+
+### Configuring Google OAuth
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials
+5. Add authorized redirect URI: `{AUTH_URL}/api/auth/callback/google`
+6. Copy Client ID and Secret to `.env`
+
+### Setting Up Email Notifications
+
+Budgetron supports any email provider compatible with the Resend SDK:
+
+```bash
+EMAIL_PROVIDER_API_KEY="re_..."
+EMAIL_PROVIDER_FROM_EMAIL="noreply@yourdomain.com"
+```
+
+Required for:
+- Password reset emails
+- Account deletion confirmations
+- Budget alerts (upcoming feature)
+
+### Configuring Cron Jobs
+
+Budgetron uses cron jobs for background tasks like currency rate synchronization:
+
+```bash
+CRON_SECRET_SLUG="sync-currency-rates"
+CRON_SECRET_TOKEN="your-secure-token"
+```
+
+Set up your cron scheduler to call:
+
+```
+POST {AUTH_URL}/api/cron/{CRON_SECRET_SLUG}
+Authorization: Bearer {CRON_SECRET_TOKEN}
+```
+
+<Tip>
+  Use services like cron-job.org or your server's crontab for scheduling.
+</Tip>
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Database connection refused">
+    **Symptoms**: Container exits with `❌ DB unavailable after 30s`
+    
+    **Solutions**:
+    - Verify PostgreSQL is running: `pg_isready -h host -p 5432`
+    - Check firewall rules allow connections
+    - Ensure `DB_URL` format is correct
+    - For Docker: Use container name instead of `localhost` if using Docker networks
+    - Increase wait timeout: `-e MAX_WAIT=60`
+  </Accordion>
+  
+  <Accordion title="Migration errors">
+    **Symptoms**: `Error: relation "users" already exists`
+    
+    **Solutions**:
+    - Check if database was previously initialized
+    - Verify database user has CREATE TABLE permissions
+    - Review migration state: `SELECT * FROM __drizzle_migrations;`
+    - For fresh start: Drop and recreate the database (data loss!)
+  </Accordion>
+  
+  <Accordion title="Authentication not working">
+    **Symptoms**: Login fails or session expires immediately
+    
+    **Solutions**:
+    - Verify `AUTH_SECRET` is set and at least 32 characters
+    - Ensure `AUTH_URL` matches the URL you're accessing
+    - Check browser cookies are enabled
+    - For HTTPS: Ensure secure cookie settings are correct
+  </Accordion>
+  
+  <Accordion title="AI categorization not working">
+    **Symptoms**: Transactions not categorized automatically
+    
+    **Solutions**:
+    - Verify all AI environment variables are set
+    - Check Ollama is running: `curl http://localhost:11434`
+    - Test API endpoint: `curl http://localhost:11434/v1/models`
+    - Review application logs for API errors
+  </Accordion>
+  
+  <Accordion title="Port conflicts">
+    **Symptoms**: `Error: Address already in use`
+    
+    **Solutions**:
+    - Change Docker port mapping: `-p 8080:3000`
+    - Find conflicting process: `lsof -i :3000`
+    - Stop conflicting service or use different port
+  </Accordion>
+  
+  <Accordion title="Build failures">
+    **Symptoms**: Docker build or `pnpm build` fails
+    
+    **Solutions**:
+    - Ensure sufficient disk space (10GB+)
+    - Clear Docker cache: `docker builder prune`
+    - For manual build: Delete `node_modules` and reinstall
+    - Check Node.js version: `node --version` (requires 18+)
+  </Accordion>
+</AccordionGroup>
+
+### Getting Help
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/raghavan-dev/budgetron/issues">
+    Report bugs or request features
+  </Card>
+  
+  <Card title="Documentation" icon="book" href="/">
+    Browse the full documentation
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+Now that Budgetron is installed:
+
+<Steps>
+  <Step title="Create Your First Account">
+    Navigate to your Budgetron URL and sign up
+  </Step>
+  
+  <Step title="Configure Your Budget">
+    Set up budget categories and spending limits
+  </Step>
+  
+  <Step title="Import Transactions">
+    Import existing transactions from CSV or OFX files
+  </Step>
+  
+  <Step title="Enable AI Categorization">
+    Let AI automatically categorize your transactions
+  </Step>
+</Steps>
+
+<Note>
+  For production deployments, see our [Production Best Practices](/deployment/production) guide.
+</Note>

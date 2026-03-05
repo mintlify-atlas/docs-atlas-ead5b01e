@@ -1,0 +1,342 @@
+---
+title: 'Docker Deployment'
+description: 'Deploy Budgetron using Docker with multi-stage builds and automated migrations'
+---
+
+Budgetron provides a production-ready Docker image with a multi-stage build process that includes automated database migrations and health checks.
+
+## Quick Start
+
+### Building the Image
+
+Build the Docker image from the project root:
+
+```bash
+docker build -t budgetron .
+```
+
+To override the default port (3000) during build:
+
+```bash
+docker build --build-arg PORT=8080 -t budgetron .
+```
+
+### Running the Container
+
+Run Budgetron with the minimum required environment variables:
+
+```bash
+docker run \
+  -e DB_URL="postgres://user:pass@host:5432/db" \
+  -e AUTH_SECRET="your-secret-key" \
+  -e AUTH_URL="https://app.example.com" \
+  -e CRON_SECRET_SLUG="your-cron-slug" \
+  -e CRON_SECRET_TOKEN="your-cron-token" \
+  -p 3000:3000 \
+  budgetron
+```
+
+## Docker Architecture
+
+### Multi-Stage Build
+
+The Dockerfile uses a four-stage build process for optimal image size and security:
+
+#### Stage 0: Base Image
+
+```dockerfile
+FROM node:alpine AS base
+RUN apk add --no-cache gcompat postgresql-client
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+```
+
+The base stage installs:
+- `gcompat` for compatibility with certain Node.js native modules
+- `postgresql-client` for the `pg_isready` health check utility
+
+#### Stage 1: Dependencies
+
+```dockerfile
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY drizzle/migrate/package.json ./drizzle/migrate/
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
+```
+
+Installs all dependencies using pnpm with locked versions.
+
+#### Stage 2: Builder
+
+```dockerfile
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN corepack enable pnpm \
+  && pnpm run build \
+  && pnpm --filter drizzle-migrate build \
+  && pnpm prune --prod
+```
+
+Builds the Next.js application in standalone mode and the Drizzle migration tooling, then removes dev dependencies.
+
+#### Stage 3: Runtime
+
+```dockerfile
+FROM base AS runner
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/drizzle/migrate/dist ./drizzle/migrate
+COPY --from=builder /app/drizzle/migrations ./drizzle/migrations
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+EXPOSE ${PORT}
+CMD ["./entrypoint.sh"]
+```
+
+Creates the minimal runtime image with only production assets.
+
+## Container Startup Process
+
+When the container starts, the entrypoint script (`entrypoint.sh`) performs the following sequence:
+
+### 1. Database Health Check
+
+```bash
+until pg_isready -d "$DB_URL"; do
+  count=$((count + 1))
+  if [ "$count" -ge "$MAX_WAIT" ]; then
+    echo "❌ DB unavailable after ${MAX_WAIT}s, exiting."
+    exit 1
+  fi
+  sleep 1
+done
+```
+
+Waits up to 30 seconds (configurable via `MAX_WAIT` environment variable) for the database to be ready.
+
+### 2. Database Migration
+
+```bash
+node drizzle/migrate/migrate.cjs \
+  --db-url="$DB_URL" \
+  --migrations-folder="drizzle/migrations" \
+  --migrations-schema="public" \
+  --migrations-table="__drizzle_migrations"
+```
+
+Automatically applies all pending Drizzle ORM migrations.
+
+### 3. Server Start
+
+```bash
+exec node server.js
+```
+
+Starts the Next.js standalone server.
+
+## Port Configuration
+
+Budgetron exposes port 3000 by default. You can customize this in two ways:
+
+### Build-time Configuration
+
+```bash
+docker build --build-arg PORT=8080 -t budgetron .
+```
+
+### Runtime Port Mapping
+
+```bash
+docker run -p 8080:3000 budgetron
+```
+
+Map the container's port 3000 to any host port.
+
+## Volume Mounts
+
+Budgetron is stateless and doesn't require persistent volumes. All data is stored in PostgreSQL.
+
+For local development with file watching, you can mount the source directory:
+
+```bash
+docker run -v $(pwd):/app -p 3000:3000 budgetron
+```
+
+## Environment Variables
+
+See the complete list of [environment variables](/configuration/environment-variables) in the configuration section.
+
+### Essential Variables
+
+These must be provided at runtime:
+
+```bash
+-e DB_URL="postgresql://user:pass@host:5432/budgetron"
+-e AUTH_SECRET="generate-with-openssl-rand-base64-32"
+-e AUTH_URL="https://budgetron.example.com"
+-e CRON_SECRET_SLUG="your-slug"
+-e CRON_SECRET_TOKEN="your-token"
+```
+
+### Optional Variables
+
+Configure additional features:
+
+```bash
+-e GOOGLE_CLIENT_ID="your-google-client-id"
+-e GOOGLE_CLIENT_SECRET="your-google-secret"
+-e OPENAI_COMPATIBLE_PROVIDER="ollama"
+-e OPENAI_COMPATIBLE_BASE_URL="http://ollama:11434/v1"
+-e OPENAI_COMPATIBLE_MODEL="llama3"
+-e EMAIL_PROVIDER_API_KEY="your-resend-key"
+-e EMAIL_PROVIDER_FROM_EMAIL="noreply@example.com"
+-e BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
+-e MAX_WAIT="60"  # Increase DB wait timeout
+```
+
+## Docker Compose Example
+
+While Budgetron doesn't include a `docker-compose.yml` file, here's a recommended setup:
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: budgetron
+      POSTGRES_USER: budgetron
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U budgetron"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  budgetron:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DB_URL: postgres://budgetron:changeme@postgres:5432/budgetron
+      AUTH_SECRET: your-auth-secret-here
+      AUTH_URL: http://localhost:3000
+      CRON_SECRET_SLUG: your-slug
+      CRON_SECRET_TOKEN: your-token
+      # Optional: Add AI provider
+      OPENAI_COMPATIBLE_PROVIDER: ollama
+      OPENAI_COMPATIBLE_BASE_URL: http://ollama:11434/v1
+      OPENAI_COMPATIBLE_MODEL: llama3
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Optional: Local LLM for AI categorization
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+volumes:
+  postgres_data:
+  ollama_data:
+```
+
+Start the stack:
+
+```bash
+docker compose up -d
+```
+
+Pull the LLM model (if using Ollama):
+
+```bash
+docker compose exec ollama ollama pull llama3
+```
+
+## Health Checks
+
+Implement Docker health checks for better orchestration:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+```
+
+Add this to your Dockerfile or docker-compose.yml:
+
+```yaml
+healthcheck:
+  test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+  interval: 30s
+  timeout: 3s
+  start_period: 40s
+  retries: 3
+```
+
+## Image Registry
+
+Budgetron publishes official Docker images to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/budgetron-org/budgetron:latest
+```
+
+Available tags:
+- `latest` - Latest stable release
+- `v0.1.0` - Specific version
+- `master` - Latest commit on master branch
+
+## Troubleshooting
+
+### Container Exits Immediately
+
+Check the database connection:
+
+```bash
+docker logs <container-id>
+```
+
+Look for database connection errors. Ensure `DB_URL` is correct and the database is accessible.
+
+### Migration Failures
+
+If migrations fail, you can run them manually:
+
+```bash
+docker exec -it <container-id> sh
+node drizzle/migrate/migrate.cjs --db-url="$DB_URL" --migrations-folder="drizzle/migrations"
+```
+
+### Permission Issues
+
+The container runs as root by default. For better security, create a non-root user:
+
+```dockerfile
+USER node
+```
+
+Add this before the `CMD` instruction in your Dockerfile.
+
+### Increase Database Wait Time
+
+If your database takes longer to start:
+
+```bash
+docker run -e MAX_WAIT=60 ... budgetron
+```
+
+## Next Steps
+
+- [Self-Hosting Guide](/deployment/self-hosting) - Deploy on your own infrastructure
+- [Production Setup](/deployment/production) - Production hardening and best practices
+- [Environment Variables](/configuration/environment-variables) - Complete configuration reference

@@ -1,0 +1,303 @@
+---
+title: Database Migrations
+description: How to create and apply database migrations using Drizzle ORM
+---
+
+Budgetron uses [Drizzle ORM](https://orm.drizzle.team/) for database management and migrations. This guide covers the migration workflow for local development and production.
+
+## Migration Files Location
+
+All migrations are stored in the `drizzle/migrations/` directory:
+
+```
+drizzle/
+  migrations/
+    0000_init.sql
+    0001_seed-categories.sql
+    0002_seed-feature-flags-allow-signup.sql
+    0003_use-single-display-name.sql
+    ...
+    meta/
+      _journal.json
+      0000_snapshot.json
+      0001_snapshot.json
+      ...
+  migrate/              # Standalone migration runner
+    migrate.ts
+    package.json
+```
+
+## Configuration
+
+Migration settings are defined in `drizzle.config.ts`:
+
+```typescript
+import { defineConfig } from 'drizzle-kit'
+
+export default defineConfig({
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DB_URL!,
+    ssl: false,
+  },
+  out: './drizzle/migrations',        // Migration output directory
+  schema: './src/server/db/schema.ts', // Schema source
+  casing: 'snake_case',                // Database naming convention
+  strict: true,
+  migrations: {
+    schema: 'public',
+    table: '__drizzle_migrations',     // Migration tracking table
+  },
+})
+```
+
+## Database Schema Organization
+
+The database schema is defined in TypeScript files:
+
+- **src/server/db/schema.ts** - Central export that combines all schemas
+- **src/server/db/schemas/** - Individual table definitions:
+  - `user.ts`, `session.ts`, `account.ts` - Authentication
+  - `bank-account.ts` - Bank accounts
+  - `transaction.ts` - Financial transactions
+  - `category.ts` - Categories
+  - `budget.ts` - Budgets
+  - `currency-rate.ts` - Exchange rates
+  - `group.ts`, `group-user.ts` - Groups
+  - `user-settings.ts` - User settings
+  - `feature-flags.ts` - Feature flags
+  - `enums.ts` - Shared enums
+
+## Common Migration Commands
+
+### Apply Migrations
+
+Run pending migrations against your database:
+
+```bash
+pnpm run db:migrate
+```
+
+This command:
+1. Connects to the database specified in `DB_URL`
+2. Checks the `__drizzle_migrations` table
+3. Applies any pending migrations in order
+
+### Generate New Migration
+
+After modifying schema files in `src/server/db/schemas/`, generate a migration:
+
+```bash
+pnpm run db:generate
+```
+
+Drizzle Kit will:
+1. Compare your schema to the current database state
+2. Generate SQL migration files
+3. Update the metadata in `drizzle/migrations/meta/`
+
+Review the generated SQL before applying it.
+
+### Push Schema (Development Only)
+
+For rapid prototyping, push schema changes directly without migrations:
+
+```bash
+pnpm run db:push
+```
+
+<Warning>
+**Use with caution**: `db:push` bypasses migration history and can cause data loss. Only use during active development.
+</Warning>
+
+### Open Drizzle Studio
+
+Explore your database with Drizzle Studio (a visual database browser):
+
+```bash
+pnpm run db:studio
+```
+
+This opens a web interface at [http://localhost:4983](http://localhost:4983).
+
+## Development Environment Workflow
+
+If you maintain separate `.env` and `.env.development` files:
+
+### Using Development Environment
+
+```bash
+# Generate migration using .env.development
+pnpm run db:generate:dev
+
+# Apply migrations to development database
+pnpm run db:migrate:dev
+
+# Push schema to development database
+pnpm run db:push:dev
+
+# Open Studio for development database
+pnpm run db:studio:dev
+```
+
+These commands use `dotenv-cli` to load variables from `.env.development` instead of `.env`.
+
+## Creating Migrations
+
+### Step-by-Step Workflow
+
+1. **Modify the schema**
+
+   Edit files in `src/server/db/schemas/`, for example `transaction.ts`:
+
+   ```typescript
+   export const transactions = pgTable('transaction', {
+     id: serial('id').primaryKey(),
+     description: text('description').notNull(),
+     amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+     // Add new column
+     notes: text('notes'),
+   })
+   ```
+
+2. **Generate the migration**
+
+   ```bash
+   pnpm run db:generate
+   ```
+
+   Drizzle Kit will prompt you for a migration name or auto-generate one.
+
+3. **Review the migration**
+
+   Check the generated SQL in `drizzle/migrations/[number]_[name].sql`:
+
+   ```sql
+   ALTER TABLE "transaction" ADD COLUMN "notes" text;
+   ```
+
+4. **Apply the migration**
+
+   ```bash
+   pnpm run db:migrate
+   ```
+
+5. **Commit both the schema and migration files**
+
+   ```bash
+   git add src/server/db/schemas/transaction.ts
+   git add drizzle/migrations/
+   git commit -m "Add notes column to transactions"
+   ```
+
+## Patching Migrations
+
+For advanced scenarios, you can patch migrations programmatically:
+
+```bash
+pnpm run db:patch-migrations
+
+# Or for development environment
+pnpm run db:patch-migrations:dev
+```
+
+This runs `scripts/db-migrations-patch.ts`, which can modify migration files before they're applied.
+
+## Production Migrations
+
+### Docker Entrypoint
+
+The Dockerfile includes an entrypoint script that automatically runs migrations on container start:
+
+```bash
+# From entrypoint.sh
+./drizzle/migrate/node_modules/.bin/tsx \
+  ./drizzle/migrate/migrate.ts \
+  --db-url="$DB_URL" \
+  --migrations-folder=./drizzle/migrations
+```
+
+### Manual Production Migrations
+
+If you need to run migrations manually in production:
+
+```bash
+DB_URL="postgres://user:pass@host:5432/db" pnpm run db:migrate
+```
+
+Or use the standalone migration runner:
+
+```bash
+cd drizzle/migrate
+node migrate.js \
+  --db-url="postgres://user:pass@host:5432/db" \
+  --migrations-folder=../migrations
+```
+
+## Migration Tracking
+
+Drizzle tracks applied migrations in the `__drizzle_migrations` table:
+
+| Column       | Type      | Description                          |
+|--------------|-----------|--------------------------------------|
+| id           | serial    | Auto-incrementing ID                 |
+| hash         | text      | Migration file hash                  |
+| created_at   | timestamp | When migration was applied           |
+
+You can query this table to see migration history:
+
+```sql
+SELECT * FROM __drizzle_migrations ORDER BY created_at DESC;
+```
+
+## Best Practices
+
+### Do:
+
+- **Always generate migrations** for schema changes in production
+- **Review generated SQL** before applying migrations
+- **Test migrations** on a copy of production data
+- **Commit migrations with schema changes** in the same PR
+- **Use descriptive migration names** when prompted
+- **Back up production database** before major migrations
+
+### Don't:
+
+- **Don't use `db:push` in production** - it bypasses migration history
+- **Don't edit applied migrations** - create a new migration instead
+- **Don't skip migrations** - apply them in order
+- **Don't commit schema changes without migrations**
+
+## Troubleshooting
+
+### Migration Already Applied
+
+If you see "Migration already applied":
+
+1. Check `__drizzle_migrations` table
+2. Verify the migration hash matches
+3. If developing locally, consider resetting your database
+
+### Migration Failed
+
+If a migration fails mid-execution:
+
+1. Check PostgreSQL logs for errors
+2. Verify your database user has sufficient permissions
+3. Manually fix the database state if needed
+4. Remove the failed entry from `__drizzle_migrations`
+5. Re-run the migration
+
+### Schema Out of Sync
+
+If your schema doesn't match the database:
+
+1. Run `pnpm run db:generate` to see the diff
+2. Apply with `pnpm run db:migrate`
+3. Or use `pnpm run db:push` if in development
+
+## Related Resources
+
+- [Drizzle ORM Documentation](https://orm.drizzle.team/)
+- [Drizzle Kit Commands](https://orm.drizzle.team/kit-docs/commands)
+- [Project Structure](/development/project-structure) - Understanding the database layer

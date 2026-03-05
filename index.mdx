@@ -1,97 +1,316 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: Budgetron Documentation
+mode: custom
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#94cb04] via-[#7ba903] to-[#638a02] dark:from-[#0f1117] dark:via-[#1a1d27] dark:to-[#0f1117] py-20 lg:py-24">
+  <div className="absolute inset-0 bg-black/20 dark:bg-black/40"></div>
+  <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <div className="lg:col-span-7 text-center lg:text-left">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Take Control of Your Finances with Budgetron
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 dark:text-gray-200 max-w-2xl mx-auto lg:mx-0 mb-8">
+          A privacy-focused, self-hosted budgeting app with AI-powered transaction categorization. Built with Next.js, PostgreSQL, and modern web technologies.
+        </p>
+        <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#94cb04] font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+          >
+            Get Started
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+          <a
+            href="/api/overview"
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors backdrop-blur-sm"
+          >
+            API Reference
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:flex justify-center items-center">
+        <div className="w-full max-w-md bg-white/10 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/20 p-6 shadow-2xl">
+          <div className="space-y-4">
+            <div className="h-8 bg-white/20 rounded-lg w-3/4"></div>
+            <div className="h-24 bg-white/15 rounded-xl"></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-16 bg-white/20 rounded-lg"></div>
+              <div className="h-16 bg-white/20 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Quick Start</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+      Get Budgetron up and running in minutes with Docker or self-hosted deployment
+    </p>
+  </div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Clone the Repository">
+      Clone the Budgetron repository from GitHub to your local machine.
 
-## Make it yours
+      ```bash
+      git clone https://github.com/budgetron-org/budgetron.git
+      cd budgetron
+      ```
+    </Step>
 
-Design a docs site that looks great and empowers your users.
+    <Step title="Configure Environment Variables">
+      Copy the example environment file and configure your database, authentication, and optional services.
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+      ```bash
+      cp .env.example .env
+      ```
+
+      At minimum, set these required variables:
+      - `DB_URL` - PostgreSQL connection string
+      - `AUTH_SECRET` - Secret for JWT session encryption
+      - `AUTH_URL` - Your app's public URL
+
+      <Tip>See the [Environment Variables](/configuration/environment-variables) guide for all available options.</Tip>
+    </Step>
+
+    <Step title="Start with Docker">
+      The easiest way to run Budgetron is using Docker:
+
+      ```bash
+      docker build -t budgetron .
+      docker run -p 3000:3000 --env-file .env budgetron
+      ```
+
+      The container will automatically wait for the database, run migrations, and start the application.
+    </Step>
+
+    <Step title="Access Your Dashboard">
+      Open your browser and navigate to `http://localhost:3000` to access Budgetron. Create an account and start managing your budget!
+
+      <Note>For production deployments, check out our [Production Guide](/deployment/production) for best practices.</Note>
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Core Features</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Everything you need to manage your personal finances
+    </p>
+  </div>
+
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Budget Management"
+      icon="wallet"
+      href="/features/budgeting"
+    >
+      Create and track budgets across multiple categories with real-time spending insights and alerts.
+    </Card>
+    <Card
+      title="AI Categorization"
+      icon="sparkles"
+      href="/features/ai-categorization"
+    >
+      Automatically categorize transactions using local LLMs or OpenAI-compatible APIs for intelligent expense tracking.
+    </Card>
+    <Card
+      title="Multi-Account Support"
+      icon="building-columns"
+      href="/features/bank-accounts"
+    >
+      Manage multiple bank accounts and track transactions across all your financial accounts in one place.
+    </Card>
+    <Card
+      title="Reports & Analytics"
+      icon="chart-line"
+      href="/features/reports"
+    >
+      Visualize cash flow, category breakdowns, and spending trends with interactive charts and reports.
+    </Card>
+    <Card
+      title="Transaction Import"
+      icon="file-arrow-up"
+      href="/features/transactions"
+    >
+      Import transactions from OFX files or manually add them with a clean, intuitive interface.
+    </Card>
+    <Card
+      title="Privacy-First"
+      icon="shield-check"
+      href="/deployment/self-hosting"
+    >
+      Self-host on your own infrastructure with complete control over your financial data.
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Technology Stack</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Built with modern, production-ready technologies
+    </p>
+  </div>
 
-Everything you need to create world-class documentation.
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="bg-white dark:bg-[#1a1d27] rounded-xl border border-gray-200 dark:border-[#27272a] p-6 hover:border-[#94cb04] dark:hover:border-[#94cb04] transition-colors">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Frontend</h3>
+      <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+        <li>• Next.js 14+ App Router</li>
+        <li>• React 19 with TypeScript</li>
+        <li>• Tailwind CSS + shadcn/ui</li>
+        <li>• TanStack Query & Forms</li>
+      </ul>
+    </div>
+    <div className="bg-white dark:bg-[#1a1d27] rounded-xl border border-gray-200 dark:border-[#27272a] p-6 hover:border-[#94cb04] dark:hover:border-[#94cb04] transition-colors">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Backend</h3>
+      <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+        <li>• PostgreSQL Database</li>
+        <li>• Drizzle ORM</li>
+        <li>• oRPC for type-safe APIs</li>
+        <li>• BetterAuth</li>
+      </ul>
+    </div>
+    <div className="bg-white dark:bg-[#1a1d27] rounded-xl border border-gray-200 dark:border-[#27272a] p-6 hover:border-[#94cb04] dark:hover:border-[#94cb04] transition-colors">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Infrastructure</h3>
+      <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+        <li>• Docker & Docker Compose</li>
+        <li>• Vercel Blob Storage</li>
+        <li>• Email via Resend</li>
+        <li>• AI via Ollama/OpenAI</li>
+      </ul>
+    </div>
+  </div>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore the Documentation</h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Deep dive into configuration, deployment, and development
+    </p>
+  </div>
 
-## Need inspiration?
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <a
+      href="/configuration/environment-variables"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#94cb04] dark:hover:border-[#94cb04] overflow-hidden no-underline transition-colors bg-white dark:bg-[#1a1d27]"
+    >
+      <div className="p-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#94cb04] transition-colors">
+          Configuration Guide
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Learn how to configure authentication, database connections, AI providers, email services, and more.
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#94cb04]">
+          <span>Configure your app</span>
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    <a
+      href="/deployment/docker"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#94cb04] dark:hover:border-[#94cb04] overflow-hidden no-underline transition-colors bg-white dark:bg-[#1a1d27]"
+    >
+      <div className="p-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#94cb04] transition-colors">
+          Deployment Options
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Deploy Budgetron with Docker, on your own infrastructure, or in production environments.
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#94cb04]">
+          <span>Deployment guides</span>
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a
+      href="/development/project-structure"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#94cb04] dark:hover:border-[#94cb04] overflow-hidden no-underline transition-colors bg-white dark:bg-[#1a1d27]"
+    >
+      <div className="p-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#94cb04] transition-colors">
+          Development Guide
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Set up your local development environment and learn about the project architecture.
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#94cb04]">
+          <span>Start developing</span>
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a
+      href="/api/overview"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#94cb04] dark:hover:border-[#94cb04] overflow-hidden no-underline transition-colors bg-white dark:bg-[#1a1d27]"
+    >
+      <div className="p-6">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#94cb04] transition-colors">
+          API Reference
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Explore the complete API reference for programmatic access to Budgetron features.
+        </p>
+        <div className="flex items-center text-sm font-medium text-[#94cb04]">
+          <span>Browse API docs</span>
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="bg-gradient-to-r from-[#94cb04] to-[#7ba903] dark:from-[#1a1d27] dark:to-[#242838] rounded-2xl p-8 md:p-12 text-center border dark:border-[#27272a]">
+    <h2 className="text-2xl md:text-3xl font-bold text-white dark:text-white mb-4">
+      Ready to Take Control of Your Budget?
+    </h2>
+    <p className="text-lg text-white/90 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+      Start managing your finances with privacy, control, and intelligent AI-powered insights.
+    </p>
+    <div className="flex flex-wrap gap-4 justify-center">
+      <a
+        href="/quickstart"
+        className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#94cb04] dark:bg-[#94cb04] dark:text-white font-semibold hover:bg-gray-100 dark:hover:bg-[#7ba903] transition-colors shadow-lg"
+      >
+        Get Started Now
+        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+      <a
+        href="https://github.com/budgetron-org/budgetron"
+        className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 dark:border-white/20 bg-white/10 dark:bg-white/5 text-white font-semibold hover:bg-white/20 dark:hover:bg-white/10 transition-colors backdrop-blur-sm"
+      >
+        <svg className="mr-2 w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</div>

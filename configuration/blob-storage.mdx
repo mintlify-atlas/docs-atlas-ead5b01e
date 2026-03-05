@@ -1,0 +1,404 @@
+---
+title: Blob Storage
+description: Configure file upload and storage for profile pictures
+---
+
+Budgetron uses blob storage for file uploads, primarily for user profile pictures. The default implementation uses [Vercel Blob Storage](https://vercel.com/docs/storage/vercel-blob), but can be replaced with any cloud storage provider.
+
+<Info>
+  Blob storage is **optional**. If not configured, profile picture upload will be disabled.
+</Info>
+
+## Blob Storage Configuration
+
+<ParamField path="BLOB_READ_WRITE_TOKEN" type="string">
+  Vercel Blob Storage read/write token for file uploads.
+  
+  **Example:** `vercel_blob_rw_abc123def456...`
+  
+  **Required:** Yes (if using file uploads)
+  
+  **Note:** Required only for profile picture upload feature.
+</ParamField>
+
+## Using Vercel Blob Storage
+
+Vercel Blob Storage offers:
+- Simple API integration
+- Free tier: 500 GB bandwidth/month
+- Global CDN for fast delivery
+- Automatic HTTPS
+- No configuration needed
+
+### Setting Up Vercel Blob
+
+1. **Create or select a Vercel project:**
+   - Deploy to Vercel or link existing project
+   - Run: `vercel link`
+
+2. **Create a Blob store:**
+   ```bash
+   vercel blob create budgetron-uploads
+   ```
+
+3. **Get the read/write token:**
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Select your project
+   - Navigate to **Storage** → **Blob**
+   - Copy the **Read-Write Token**
+
+4. **Set environment variable:**
+   ```bash
+   BLOB_READ_WRITE_TOKEN="vercel_blob_rw_your_token_here"
+   ```
+
+### Vercel Blob CLI
+
+Manage blob storage with the CLI:
+
+```bash
+# List all blob stores
+vercel blob ls
+
+# Create new blob store
+vercel blob create <name>
+
+# Delete blob store
+vercel blob rm <name>
+
+# List files in store
+vercel blob list
+```
+
+## Storage Implementation
+
+The blob storage service is implemented in `src/server/blob/service.ts`:
+
+```typescript
+async function upload({ path, fileName, file }: UploadOptions) {
+  if (!isBlobStorageEnabled(env)) {
+    throw new Error('Blob storage is not enabled')
+  }
+  
+  const blob = await put(`${path}/${fileName}`, file, {
+    access: 'public',
+    addRandomSuffix: true,
+    token: env.BLOB_READ_WRITE_TOKEN,
+  })
+  
+  return { url: blob.url }
+}
+```
+
+### Upload Options
+
+| Option | Value | Description |
+| --- | --- | --- |
+| `access` | `public` | Files are publicly accessible via CDN |
+| `addRandomSuffix` | `true` | Prevents filename collisions |
+| `token` | Environment variable | Authentication token |
+
+### Service Detection
+
+The application checks if blob storage is enabled at runtime using `isBlobStorageEnabled()` defined in `src/server/blob/util.ts`. The token must be set for the service to be active.
+
+## File Upload Workflow
+
+### Profile Picture Upload
+
+1. User clicks "Upload Profile Picture"
+2. File selected from device
+3. Client-side validation (size, type)
+4. File uploaded to blob storage
+5. URL returned and saved to database
+6. Profile picture updated in UI
+
+### File Validation
+
+- **Allowed formats:** JPEG, PNG, WebP, GIF
+- **Max size:** 5 MB
+- **Dimensions:** Automatically resized for display
+
+### Storage Path Structure
+
+```
+profile-pictures/
+  {userId}/
+    {fileName}-{randomSuffix}.{ext}
+```
+
+**Example:** `profile-pictures/user-123/avatar-abc123.jpg`
+
+## Using Alternative Storage Providers
+
+<Info>
+  You can replace Vercel Blob with any cloud storage provider by modifying `src/server/blob/service.ts`.
+</Info>
+
+### Supported Alternatives
+
+<AccordionGroup>
+  <Accordion title="AWS S3" icon="aws">
+    Industry-standard object storage.
+    
+    **Setup:**
+    1. Install: `npm install @aws-sdk/client-s3`
+    2. Create S3 bucket with public read access
+    3. Replace Vercel Blob in service.ts
+    4. Update environment variables:
+       ```bash
+       AWS_ACCESS_KEY_ID="your-key"
+       AWS_SECRET_ACCESS_KEY="your-secret"
+       AWS_REGION="us-east-1"
+       AWS_BUCKET_NAME="budgetron-uploads"
+       ```
+    
+    **Docs:** [docs.aws.amazon.com/s3](https://docs.aws.amazon.com/s3/)
+  </Accordion>
+  
+  <Accordion title="Cloudflare R2" icon="cloudflare">
+    S3-compatible storage with no egress fees.
+    
+    **Setup:**
+    1. Install: `npm install @aws-sdk/client-s3`
+    2. Create R2 bucket
+    3. Replace Vercel Blob in service.ts
+    4. Configure S3-compatible endpoint
+    
+    **Docs:** [developers.cloudflare.com/r2](https://developers.cloudflare.com/r2/)
+  </Accordion>
+  
+  <Accordion title="Google Cloud Storage" icon="google">
+    Scalable object storage by Google.
+    
+    **Setup:**
+    1. Install: `npm install @google-cloud/storage`
+    2. Create GCS bucket
+    3. Replace Vercel Blob in service.ts
+    4. Configure service account credentials
+    
+    **Docs:** [cloud.google.com/storage/docs](https://cloud.google.com/storage/docs)
+  </Accordion>
+  
+  <Accordion title="DigitalOcean Spaces" icon="water">
+    S3-compatible object storage.
+    
+    **Setup:**
+    1. Install: `npm install @aws-sdk/client-s3`
+    2. Create Spaces bucket
+    3. Replace Vercel Blob in service.ts
+    4. Configure Spaces endpoint
+    
+    **Docs:** [docs.digitalocean.com/products/spaces](https://docs.digitalocean.com/products/spaces/)
+  </Accordion>
+  
+  <Accordion title="Supabase Storage" icon="database">
+    Open-source blob storage.
+    
+    **Setup:**
+    1. Install: `npm install @supabase/supabase-js`
+    2. Create storage bucket
+    3. Replace Vercel Blob in service.ts
+    4. Configure Supabase client
+    
+    **Docs:** [supabase.com/docs/guides/storage](https://supabase.com/docs/guides/storage)
+  </Accordion>
+</AccordionGroup>
+
+### Implementation Example (AWS S3)
+
+```typescript
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+
+const s3Client = new S3Client({
+  region: env.AWS_REGION,
+  credentials: {
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+  },
+})
+
+async function upload({ path, fileName, file }: UploadOptions) {
+  const key = `${path}/${fileName}`
+  const buffer = Buffer.from(await file.arrayBuffer())
+  
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: env.AWS_BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+      ACL: 'public-read',
+    })
+  )
+  
+  return {
+    url: `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_REGION}.amazonaws.com/${key}`,
+  }
+}
+```
+
+## Security Considerations
+
+### Access Control
+
+Vercel Blob files are:
+- **Public by default** - Anyone with URL can access
+- **Unpredictable URLs** - Random suffix prevents guessing
+- **HTTPS only** - All files served over secure connection
+
+<Warning>
+  Never upload sensitive documents using blob storage configured with public access. Profile pictures are public by design.
+</Warning>
+
+### File Validation
+
+Implement server-side validation:
+- Check file type and size
+- Scan for malware (in production)
+- Validate image dimensions
+- Reject executable files
+
+### Token Security
+
+<Warning>
+  The `BLOB_READ_WRITE_TOKEN` grants full read/write access. Keep it secure:
+</Warning>
+
+- Never commit tokens to version control
+- Rotate tokens periodically
+- Use environment-specific tokens
+- Monitor usage for anomalies
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Upload Failing" icon="circle-xmark">
+    **Error:** "Blob storage is not enabled"
+    
+    **Solution:** Verify environment variable is set:
+    ```bash
+    echo $BLOB_READ_WRITE_TOKEN
+    ```
+    
+    Must return a non-empty value starting with `vercel_blob_rw_`.
+  </Accordion>
+  
+  <Accordion title="Invalid Token" icon="key">
+    **Error:** "Unauthorized" or "Invalid token"
+    
+    **Solutions:**
+    - Verify token is correct (starts with `vercel_blob_rw_`)
+    - Regenerate token in Vercel dashboard
+    - Check token hasn't expired or been revoked
+  </Accordion>
+  
+  <Accordion title="File Too Large" icon="file">
+    **Error:** "File size exceeds limit"
+    
+    **Solutions:**
+    - Verify file is under 5 MB
+    - Implement client-side compression
+    - Increase size limit (update validation)
+  </Accordion>
+  
+  <Accordion title="Network Error" icon="wifi-slash">
+    **Error:** "Failed to upload file" or "Network error"
+    
+    **Solutions:**
+    - Check internet connectivity
+    - Verify Vercel Blob API is accessible
+    - Check for firewall blocking requests
+    - Try again (transient network issues)
+  </Accordion>
+</AccordionGroup>
+
+### Testing Blob Storage
+
+Test your configuration:
+
+```bash
+# Test upload with curl
+curl -X PUT "https://blob.vercel-storage.com/test.txt" \
+  -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \
+  -H "Content-Type: text/plain" \
+  -d "test content"
+```
+
+Expected response: JSON with `url` field.
+
+## Storage Limits and Pricing
+
+### Vercel Blob Pricing (as of 2024)
+
+| Plan | Storage | Bandwidth | Price |
+| --- | --- | --- | --- |
+| **Hobby** | 1 GB | 50 GB/month | Free |
+| **Pro** | 100 GB | 1 TB/month | Included in Pro plan |
+| **Enterprise** | Custom | Custom | Custom pricing |
+
+**Overage charges:**
+- Storage: $0.15/GB/month
+- Bandwidth: $0.10/GB
+
+<Info>
+  For profile pictures, the free tier is typically sufficient for hundreds of users.
+</Info>
+
+### Storage Estimation
+
+| Metric | Average Size | 100 Users | 1,000 Users |
+| --- | --- | --- | --- |
+| Profile picture | 200 KB | 20 MB | 200 MB |
+| Monthly bandwidth | 2 views/day | 1.2 GB | 12 GB |
+
+## Performance Optimization
+
+### Image Optimization
+
+<Tip>
+  Optimize images before upload to reduce storage and bandwidth costs:
+</Tip>
+
+- **Compress images** - Use client-side compression
+- **Resize large images** - Max 1024x1024 for profile pictures
+- **Use WebP format** - Smaller file size, modern browsers
+- **Lazy load images** - Load only when visible
+
+### CDN Delivery
+
+Vercel Blob automatically serves files via global CDN:
+- **Fast delivery** - Files cached at edge locations
+- **Automatic caching** - Cache headers set automatically
+- **HTTPS only** - All files served securely
+
+## Content Management
+
+### Deleting Files
+
+When a user:
+- Uploads new profile picture → Old picture should be deleted
+- Deletes account → All uploaded files should be deleted
+
+Implement cleanup in your application:
+
+```typescript
+import { del } from '@vercel/blob'
+
+async function deleteProfilePicture(url: string) {
+  await del(url, { token: env.BLOB_READ_WRITE_TOKEN })
+}
+```
+
+### File Lifecycle
+
+1. **Upload** - File uploaded to blob storage
+2. **Store URL** - URL saved to database
+3. **Serve** - File served via CDN
+4. **Update** - Old file deleted, new file uploaded
+5. **Delete** - File removed when user deleted
+
+## Related Configuration
+
+- [Environment Variables](/configuration/environment-variables) - Complete environment reference
+- [Authentication Configuration](/configuration/authentication) - User profile management

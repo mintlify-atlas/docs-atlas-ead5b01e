@@ -1,0 +1,191 @@
+---
+title: Bank Accounts
+description: Manage your financial accounts and track your net worth
+---
+
+## Overview
+
+Bank Accounts in Budgetron represent your real-world financial accounts. Track balances across checking, savings, credit cards, and investments in one place.
+
+## Account Types
+
+Budgetron supports multiple account types:
+
+### Checking
+Your primary transaction accounts:
+- Day-to-day spending
+- Direct deposit accounts
+- Debit card accounts
+
+### Savings
+Interest-bearing savings accounts:
+- Emergency funds
+- Goal-based savings
+- High-yield savings accounts
+
+### Credit Card
+Credit and charge accounts:
+- Credit card balances (shown as negative)
+- Store credit accounts
+- Charge cards
+
+### Investment
+Investment and brokerage accounts:
+- Stock portfolios
+- Retirement accounts (401k, IRA)
+- Brokerage accounts
+- Mutual funds
+
+## Key Features
+
+### Net Worth Tracking
+
+The Bank Accounts page displays your total net worth by summing all account balances:
+
+- Positive balances (assets) add to net worth
+- Negative balances (liabilities like credit cards) subtract from net worth
+- Automatically updates as transactions are added
+- Multi-currency support with conversion to base currency
+
+### Account Management
+
+**Create Accounts**
+- Add unlimited bank accounts
+- Set initial balance
+- Choose account type
+- Specify currency
+
+**View Accounts**
+- Card-based layout showing key account info
+- Balance displayed prominently
+- Account type and currency indicators
+- Quick access to account details
+
+**Update Accounts**
+- Edit account name, type, or balance
+- Change account currency
+- Modify account details anytime
+
+**Delete Accounts**
+- Remove accounts no longer needed
+- Confirmation required to prevent accidental deletion
+
+<Warning>
+  Deleting a bank account may affect associated transactions. Ensure you've
+  backed up or reassigned transactions before deleting an account.
+</Warning>
+
+## User Workflows
+
+### Adding a Bank Account
+
+1. Navigate to the **Bank Accounts** page
+2. Click the **Add** button
+3. Enter account details:
+   - **Name**: Your name for the account (e.g., "Chase Checking")
+   - **Type**: Select account type (Checking, Savings, Credit Card, Investment)
+   - **Currency**: Choose account currency (defaults to USD)
+   - **Balance**: Enter current account balance
+4. Click **Create** to save
+
+### Editing an Account
+
+1. Find the account card on the Bank Accounts page
+2. Click the options menu (⋮)
+3. Select **Edit**
+4. Modify account details
+5. Click **Save** to update
+
+### Viewing Account Details
+
+1. Click on an account card
+2. View:
+   - Current balance
+   - Account type and currency
+   - Creation date
+   - Associated transactions (if implemented)
+
+### Deleting an Account
+
+1. Click the options menu (⋮) on an account card
+2. Select **Delete**
+3. Confirm deletion in the dialog
+4. Account is permanently removed
+
+## Multi-Currency Accounts
+
+Budgetron fully supports accounts in different currencies:
+
+- Each account stores its balance in its own currency
+- Net worth automatically converts all accounts to your base currency
+- Exchange rates update regularly
+- Clear indicators show which accounts use foreign currencies
+
+<Info>
+  When creating transactions, the currency from the selected bank account is
+  automatically applied to the transaction.
+</Info>
+
+## Empty State
+
+When you haven't added any bank accounts yet:
+
+- A helpful card prompts you to add your first account
+- Clear call-to-action button to get started
+- Guidance text explains next steps
+
+## Technical Details
+
+### Data Structure
+
+Bank accounts are stored with:
+
+- `id`: Unique identifier
+- `userId`: Owner of the account
+- `name`: User-defined account name
+- `type`: CHECKING, SAVINGS, CREDIT_CARD, or INVESTMENT
+- `currency`: Three-letter currency code (e.g., USD, EUR, GBP)
+- `balance`: Current account balance
+- `createdAt`: Account creation timestamp
+- `updatedAt`: Last modification timestamp
+
+### Unique Constraints
+
+Budgetron enforces uniqueness on the combination of:
+- User ID
+- Account name
+- Account type
+
+This prevents accidentally creating duplicate accounts with the same name and type.
+
+### API Integration
+
+Bank account operations use these endpoints:
+
+- `bankAccounts.getAll()`: Fetch all user's accounts
+- `bankAccounts.create()`: Add a new account
+- `bankAccounts.update()`: Modify account details
+- `bankAccounts.delete()`: Remove an account
+
+### Balance Updates
+
+Account balances don't automatically update from transactions. Balances are manually maintained through the account editing interface. Future versions may add automatic balance tracking based on transaction history.
+
+## Best Practices
+
+<Tip>
+  Use descriptive account names that match your bank statements, like "Chase
+  Freedom Visa" instead of just "Credit Card". This makes transaction imports
+  easier.
+</Tip>
+
+<Tip>
+  Regularly update account balances to match your bank statements. This helps
+  catch any missing transactions and keeps your net worth accurate.
+</Tip>
+
+## Related Features
+
+- [Transactions](/features/transactions) - All transactions link to bank accounts
+- [Reports](/features/reports) - Analyze account activity over time
+- [Categories](/features/categories) - Organize spending from each account

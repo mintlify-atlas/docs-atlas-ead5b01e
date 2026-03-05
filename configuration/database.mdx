@@ -1,0 +1,329 @@
+---
+title: Database
+description: Configure PostgreSQL database connection and migrations
+---
+
+Budgetron uses [PostgreSQL](https://www.postgresql.org/) as its database with [Drizzle ORM](https://orm.drizzle.team/) for type-safe database access and migrations.
+
+## Database Connection
+
+<ParamField path="DB_URL" type="string" required>
+  PostgreSQL connection string for database access.
+  
+  **Format:** `postgresql://[user]:[password]@[host]:[port]/[database]`
+  
+  **Example:** `postgresql://postgres:password@localhost:5432/budgetron`
+  
+  **Production Example:** `postgresql://user:pass@db.example.com:5432/production_db?sslmode=require`
+</ParamField>
+
+## Connection String Format
+
+The connection string follows the standard PostgreSQL URI format:
+
+```
+postgresql://[username]:[password]@[host]:[port]/[database]?[parameters]
+```
+
+### Components
+
+| Component | Description | Required | Example |
+| --- | --- | --- | --- |
+| `username` | Database user | ✅ Yes | `postgres`, `admin`, `budgetron_user` |
+| `password` | User password | ✅ Yes | `mySecurePassword123` |
+| `host` | Database server hostname or IP | ✅ Yes | `localhost`, `db.example.com`, `192.168.1.10` |
+| `port` | Database server port | No (default: 5432) | `5432`, `5433` |
+| `database` | Database name | ✅ Yes | `budgetron`, `production_db` |
+| `parameters` | Additional connection options | No | `sslmode=require` |
+
+### Common Parameters
+
+| Parameter | Description | Example |
+| --- | --- | --- |
+| `sslmode` | SSL connection mode | `require`, `disable`, `prefer` |
+| `connect_timeout` | Connection timeout in seconds | `10` |
+| `application_name` | Application identifier | `budgetron` |
+
+## SSL Configuration
+
+SSL is **disabled by default** in Drizzle configuration for local development. For production, enable SSL in your connection string:
+
+```bash
+# Production with SSL
+DB_URL="postgresql://user:pass@db.example.com:5432/prod?sslmode=require"
+
+# Local development without SSL
+DB_URL="postgresql://postgres:password@localhost:5432/budgetron"
+```
+
+<Warning>
+  Always use SSL (`sslmode=require`) for production databases to encrypt data in transit.
+</Warning>
+
+## Drizzle Configuration
+
+The database configuration is defined in `drizzle.config.ts`:
+
+```typescript
+export default defineConfig({
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DB_URL!,
+    ssl: false, // Override with connection string parameter if needed
+  },
+  out: './drizzle/migrations',
+  schema: './src/server/db/schema.ts',
+  casing: 'snake_case',
+  strict: true,
+  migrations: {
+    schema: 'public',
+    table: '__drizzle_migrations',
+  },
+})
+```
+
+### Configuration Options
+
+| Option | Value | Description |
+| --- | --- | --- |
+| `dialect` | `postgresql` | Database dialect |
+| `out` | `./drizzle/migrations` | Migration files directory |
+| `schema` | `./src/server/db/schema.ts` | Database schema definition |
+| `casing` | `snake_case` | Database column naming convention |
+| `strict` | `true` | Strict type checking |
+| `migrations.schema` | `public` | PostgreSQL schema for tables |
+| `migrations.table` | `__drizzle_migrations` | Migration tracking table |
+
+## Database Schema
+
+The database schema is defined in TypeScript at `src/server/db/schema.ts` and includes:
+
+### Core Tables
+
+- **`user`** - User accounts and profiles
+- **`account`** - OAuth provider connections
+- **`session`** - Active user sessions
+- **`verification`** - Email verification tokens
+
+### Application Tables
+
+- **`budget`** - Budget definitions and periods
+- **`transaction`** - Financial transactions
+- **`category`** - Transaction categories
+- **`currency`** - Supported currencies and exchange rates
+- And more...
+
+### Migration Tracking
+
+- **`__drizzle_migrations`** - Drizzle migration history
+
+<Info>
+  All table names use `snake_case` naming convention as configured in Drizzle.
+</Info>
+
+## Migrations
+
+### Running Migrations
+
+Migrations are automatically applied during Docker startup. For local development:
+
+```bash
+# Apply pending migrations
+pnpm run db:migrate
+
+# Generate new migration from schema changes
+pnpm run db:generate
+
+# Drop all tables and re-run migrations (⚠️ destructive)
+pnpm run db:reset
+```
+
+### Migration Files
+
+Migration files are stored in `drizzle/migrations/` and include:
+- SQL migration files (`.sql`)
+- Metadata files (`.json`)
+
+<Warning>
+  Never manually edit migration files. Always use `pnpm run db:generate` to create migrations from schema changes.
+</Warning>
+
+### Docker Startup Process
+
+When using Docker, the application:
+
+1. ✅ Waits for PostgreSQL to be ready
+2. ✅ Runs pending Drizzle migrations
+3. ✅ Starts the Next.js server
+
+This is handled by the Docker entrypoint script.
+
+## Local Development Setup
+
+### Using Docker Compose
+
+The quickest way to get started is using Docker Compose with PostgreSQL:
+
+```yaml
+version: '3.8'
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: budgetron
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+Then set your connection string:
+
+```bash
+DB_URL="postgresql://postgres:password@localhost:5432/budgetron"
+```
+
+### Using Managed PostgreSQL
+
+Budgetron works with any managed PostgreSQL service:
+
+<CardGroup cols={2}>
+  <Card title="Vercel Postgres" icon="triangle" href="https://vercel.com/docs/storage/vercel-postgres">
+    Serverless PostgreSQL by Vercel
+  </Card>
+  <Card title="Supabase" icon="database" href="https://supabase.com/docs/guides/database">
+    Open-source Firebase alternative
+  </Card>
+  <Card title="Neon" icon="bolt" href="https://neon.tech/docs/introduction">
+    Serverless Postgres with branching
+  </Card>
+  <Card title="Railway" icon="train" href="https://docs.railway.app/databases/postgresql">
+    PostgreSQL on Railway
+  </Card>
+</CardGroup>
+
+## Connection Pooling
+
+For production deployments, consider using connection pooling:
+
+### PgBouncer
+
+Many managed PostgreSQL services (Vercel, Supabase, Neon) provide built-in connection pooling. If not, use [PgBouncer](https://www.pgbouncer.org/):
+
+```bash
+# Connection pooler URL (port 6543 for pooled connections)
+DB_URL="postgresql://user:pass@db.example.com:6543/database?pgbouncer=true"
+```
+
+### Drizzle Pooling
+
+Drizzle uses the underlying PostgreSQL driver's connection pooling by default.
+
+## Database Requirements
+
+### PostgreSQL Version
+
+- **Minimum:** PostgreSQL 12
+- **Recommended:** PostgreSQL 14+
+- **Tested:** PostgreSQL 16
+
+### Required Extensions
+
+No PostgreSQL extensions are required. Budgetron uses standard PostgreSQL features.
+
+### Storage Requirements
+
+Storage needs depend on usage:
+- **Base schema:** ~5 MB
+- **Per user:** ~100 KB
+- **Per transaction:** ~1 KB
+
+## Troubleshooting
+
+### Connection Refused
+
+```
+Error: connect ECONNREFUSED 127.0.0.1:5432
+```
+
+**Solutions:**
+- Verify PostgreSQL is running: `pg_isready`
+- Check the host and port in `DB_URL`
+- Ensure firewall allows connections on port 5432
+
+### Authentication Failed
+
+```
+Error: password authentication failed for user "postgres"
+```
+
+**Solutions:**
+- Verify username and password in `DB_URL`
+- Check PostgreSQL `pg_hba.conf` for authentication rules
+- Try connecting with `psql` to test credentials
+
+### SSL Connection Error
+
+```
+Error: SSL connection required
+```
+
+**Solutions:**
+- Add `?sslmode=require` to your `DB_URL`
+- For self-signed certificates, use `?sslmode=require&sslcert=/path/to/cert`
+
+### Database Does Not Exist
+
+```
+Error: database "budgetron" does not exist
+```
+
+**Solutions:**
+- Create the database: `createdb budgetron`
+- Or via SQL: `CREATE DATABASE budgetron;`
+
+## Security Best Practices
+
+<Check>
+  Follow these security guidelines for production deployments:
+</Check>
+
+1. **Use strong passwords** - Generate secure passwords for database users
+2. **Enable SSL** - Always use `sslmode=require` in production
+3. **Restrict access** - Limit database access to application servers only
+4. **Regular backups** - Implement automated backup strategy
+5. **Separate environments** - Use different databases for dev/staging/production
+6. **Rotate credentials** - Periodically rotate database passwords
+
+### Generating Secure Passwords
+
+```bash
+openssl rand -base64 32
+```
+
+## Performance Optimization
+
+### Indexes
+
+Drizzle migrations automatically create indexes defined in the schema. Common indexes include:
+- Primary keys on all tables
+- Foreign key indexes for relationships
+- User lookup indexes
+
+### Connection Settings
+
+For high-traffic applications, tune connection pool settings:
+
+```bash
+DB_URL="postgresql://user:pass@host:5432/db?max_pool_size=20&min_pool_size=5"
+```
+
+## Related Configuration
+
+- [Environment Variables](/configuration/environment-variables) - Complete environment reference
+- [Deployment Guide](/deployment/docker) - Production deployment setup

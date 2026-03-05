@@ -1,0 +1,140 @@
+---
+title: Categories API
+description: API endpoints for retrieving transaction categories
+---
+
+The Categories API allows you to retrieve transaction categories for organizing income and expenses.
+
+## getAll
+
+Retrieve all categories, optionally filtered by group and transaction type.
+
+```typescript
+await client.categories.getAll({
+  groupId: "group-id",
+  type: "EXPENSE"
+})
+```
+
+### Parameters
+
+<ParamField path="groupId" type="string">
+  Optional group ID to filter categories
+</ParamField>
+
+<ParamField path="type" type="enum">
+  Optional transaction type to filter by: `INCOME`, `EXPENSE`, or `TRANSFER`
+</ParamField>
+
+### Response
+
+Returns an array of category objects.
+
+<ResponseField name="id" type="string">
+  Category ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Category name
+</ResponseField>
+
+<ResponseField name="icon" type="string">
+  Category icon identifier
+</ResponseField>
+
+<ResponseField name="type" type="enum">
+  Transaction type: `INCOME`, `EXPENSE`, or `TRANSFER`
+</ResponseField>
+
+<ResponseField name="parentId" type="string | null">
+  Parent category ID if this is a subcategory
+</ResponseField>
+
+<ResponseField name="groupId" type="string | null">
+  Group ID if category is group-specific
+</ResponseField>
+
+<ResponseField name="userId" type="string | null">
+  User ID if category is user-specific (custom category)
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Last update timestamp
+</ResponseField>
+
+## getAllSubCategories
+
+Retrieve all subcategories, optionally filtered by group and transaction type.
+
+```typescript
+await client.categories.getAllSubCategories({
+  groupId: "group-id",
+  type: "EXPENSE"
+})
+```
+
+### Parameters
+
+<ParamField path="groupId" type="string">
+  Optional group ID to filter subcategories
+</ParamField>
+
+<ParamField path="type" type="enum">
+  Optional transaction type to filter by: `INCOME`, `EXPENSE`, or `TRANSFER`
+</ParamField>
+
+### Response
+
+Returns an array of subcategory objects (categories that have a non-null `parentId`).
+
+The structure is the same as the `getAll` endpoint response.
+
+## Category Hierarchy
+
+Categories support a parent-child relationship:
+
+- **Parent categories**: Categories with `parentId: null`
+- **Subcategories**: Categories with a non-null `parentId` that references a parent category
+
+Example hierarchy:
+```
+Food (parent)
+  ├─ Groceries (subcategory)
+  ├─ Restaurants (subcategory)
+  └─ Coffee (subcategory)
+
+Transportation (parent)
+  ├─ Gas (subcategory)
+  └─ Public Transit (subcategory)
+```
+
+## TypeScript Types
+
+```typescript
+type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER"
+
+type Category = {
+  id: string
+  name: string
+  icon: string
+  type: TransactionType
+  parentId: string | null
+  groupId: string | null
+  userId: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+## Constraints
+
+- Category name, type, group, and user combination must be unique
+- Categories can be:
+  - **System categories**: Available to all users (`userId: null`, `groupId: null`)
+  - **Group categories**: Shared within a group (`groupId: set`, `userId: null`)
+  - **User categories**: Private to a specific user (`userId: set`)
+- Deleting a parent category cascades to all its subcategories

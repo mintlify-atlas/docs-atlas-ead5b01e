@@ -1,0 +1,304 @@
+---
+title: AI Categorization
+description: Automatically categorize transactions using artificial intelligence
+---
+
+## Overview
+
+AI Categorization uses machine learning to automatically assign categories to your transactions based on their descriptions. This feature saves time when importing large numbers of transactions from bank files.
+
+## How It Works
+
+### AI Model
+
+Budgetron uses a language model to analyze transaction descriptions:
+
+1. **Description Analysis**: Reads the transaction description
+2. **Category Matching**: Compares against your available categories
+3. **Confidence Scoring**: Uses fuzzy matching to find best fit
+4. **Suggestion**: Returns the most likely category
+
+### Processing Flow
+
+```
+Transaction Import → Parse OFX File → AI Categorization → User Review → Save
+```
+
+**Step 1: Upload**
+- User uploads OFX file(s)
+- Selects target bank account
+- Enables "Auto-categorize transactions" option
+
+**Step 2: Parse**
+- System extracts transactions from OFX files
+- Retrieves user's available categories
+- Prepares data for AI processing
+
+**Step 3: Categorize**
+- AI analyzes each transaction description
+- Matches descriptions to category names
+- Assigns suggested categories
+
+**Step 4: Review**
+- User previews transactions with suggested categories
+- Can edit or change any category
+- Adds tags, notes, or other details
+
+**Step 5: Save**
+- Transactions saved with final categories
+- Available immediately in reports and budgets
+
+## Using AI Categorization
+
+### During Transaction Import
+
+1. Navigate to **Transactions** → **Import**
+2. Select your bank account
+3. Choose OFX/QFX file(s) to upload
+4. Check the **Auto-categorize transactions** checkbox
+5. Click **Upload file**
+6. Review AI-suggested categories
+7. Make any adjustments needed
+8. Click **Upload transactions** to save
+
+<Info>
+  The auto-categorize option only appears when the AI service is available and
+  healthy. If you don't see this option, the AI service may be down or not
+  configured.
+</Info>
+
+### Service Health Check
+
+Budgetron checks AI service health before allowing categorization:
+
+- **Healthy**: Checkbox is enabled, auto-categorization available
+- **Unhealthy**: Checkbox is disabled with "SERVICE DOWN" badge
+- **Checking**: Loading indicator while health is verified
+
+### Category Matching Logic
+
+The AI uses sophisticated matching:
+
+**Fuzzy Matching**
+- Threshold of 0.3 for category similarity
+- Handles typos and variations in category names
+- Case-insensitive matching
+
+**Hierarchical Matching**
+- Considers parent category + subcategory name
+- Format: "Parent / Subcategory"
+- Example: "Food & Dining / Restaurants"
+
+**Description Keywords**
+- Analyzes merchant names
+- Recognizes common patterns
+- Learns from category structure
+
+<Tip>
+  For best results, use descriptive category names that match common merchant
+  names or transaction types (e.g., "Gas & Fuel" for gas stations, "Groceries"
+  for supermarkets).
+</Tip>
+
+## Categorization Accuracy
+
+### What AI Does Well
+
+✅ **Recognizes common merchants**
+- Starbucks → Coffee Shops
+- Shell Gas Station → Gas & Fuel
+- Whole Foods → Groceries
+- Netflix → Entertainment/Streaming
+
+✅ **Identifies transaction patterns**
+- Recurring subscriptions
+- Utility payments
+- ATM withdrawals
+- Transfer descriptions
+
+✅ **Uses category context**
+- Parent/child category relationships
+- Similar category groupings
+- Common spending patterns
+
+### When to Review Suggestions
+
+⚠️ **Ambiguous descriptions**
+- Generic terms like "Payment" or "Transfer"
+- Abbreviated merchant names
+- Unknown or uncommon merchants
+
+⚠️ **Multiple possible categories**
+- Amazon (could be many categories)
+- Walmart (groceries, household, electronics)
+- Generic store names
+
+⚠️ **Custom categories**
+- Newly created categories
+- Very specific subcategories
+- Personal categorization preferences
+
+<Warning>
+  Always review AI suggestions before saving transactions. The AI is a helpful
+  assistant, not a perfect categorizer. Your personal judgment is important for
+  accurate financial tracking.
+</Warning>
+
+## Technical Details
+
+### AI Service Architecture
+
+**Model**: Configurable language model (OpenAI, Ollama, etc.)
+- Processes natural language descriptions
+- Returns structured category suggestions
+- Handles batch processing
+
+**Chunking**: Transactions processed in batches
+- Prevents token limit issues
+- Optimizes for model constraints
+- Typically 6000 characters per chunk
+
+**Fuse.js Integration**: Fuzzy string matching
+- Matches AI output to actual categories
+- Threshold: 0.3 similarity
+- Location-independent matching
+
+### System Prompts
+
+The AI receives:
+
+1. **System Prompt**: Instructions for categorization task
+2. **User Prompt**: Transaction list + available categories
+3. **Schema**: Expected output format (index + category)
+
+### Response Format
+
+```json
+{
+  "result": [
+    {
+      "index": 0,
+      "category": "Food & Dining / Restaurants"
+    },
+    {
+      "index": 1,
+      "category": "Transportation / Gas & Fuel"
+    }
+  ]
+}
+```
+
+### Error Handling
+
+**Service Unavailable**
+- Graceful fallback: categorization disabled
+- User can still import without AI help
+- Clear error message displayed
+
+**Categorization Failure**
+- Transactions imported without categories
+- User can manually categorize after import
+- Error logged for debugging
+
+**Invalid Suggestions**
+- Fuzzy matching finds closest category
+- Falls back to null if no match found
+- User can select correct category
+
+## Configuration
+
+### Enabling AI Service
+
+AI categorization requires:
+
+1. **AI Model Configuration**: Set up model in environment
+2. **API Keys**: Configure necessary API credentials
+3. **Service Health**: Model must be reachable
+
+### Environment Variables
+
+Typical configuration:
+
+```bash
+AI_MODEL_PROVIDER=openai  # or ollama, anthropic, etc.
+AI_MODEL_NAME=gpt-4       # specific model
+AI_API_KEY=sk-...         # API credentials
+```
+
+<Info>
+  Consult your Budgetron deployment documentation for specific AI configuration
+  instructions.
+</Info>
+
+### Performance Considerations
+
+**Processing Time**
+- Depends on number of transactions
+- API latency for external models
+- Typically 1-5 seconds per batch
+
+**Token Limits**
+- Respect model token constraints
+- Automatic chunking prevents errors
+- Optimized prompt design
+
+**Cost Implications**
+- External APIs may charge per request
+- Monitor usage for cost control
+- Consider self-hosted models for high volume
+
+## Privacy and Security
+
+<Warning>
+  Transaction descriptions are sent to the AI service for categorization. If
+  using external AI providers, ensure you're comfortable with this data sharing.
+  Consider self-hosted AI models for maximum privacy.
+</Warning>
+
+**Data Transmitted**
+- Transaction descriptions (merchant names, etc.)
+- Transaction amounts (for context)
+- Available category list
+
+**Data NOT Transmitted**
+- User personal information
+- Account numbers or credentials
+- Full transaction history
+- Other sensitive financial data
+
+## Best Practices
+
+<Tip>
+  Use AI categorization for initial imports of large transaction sets, then
+  fine-tune categories manually as needed.
+</Tip>
+
+<Tip>
+  Create categories before importing if you have specific needs. The AI can
+  only suggest from existing categories.
+</Tip>
+
+<Tip>
+  After AI categorization, spot-check a few transactions in each category to
+  verify accuracy before relying on reports.
+</Tip>
+
+<Tip>
+  If you repeatedly correct the same AI suggestion, consider creating a more
+  specific category name that matches your transaction descriptions.
+</Tip>
+
+## Limitations
+
+- AI service must be configured and running
+- Requires network connectivity for cloud AI providers
+- May incur API costs depending on provider
+- Accuracy varies based on description quality
+- Limited to existing categories (doesn't create new ones)
+- Processes in chunks, which may take time for large imports
+
+## Related Features
+
+- [Transactions](/features/transactions) - Import and manage transactions
+- [Categories](/features/categories) - Set up categories for AI to use
+- [Bank Accounts](/features/bank-accounts) - Select account for imports

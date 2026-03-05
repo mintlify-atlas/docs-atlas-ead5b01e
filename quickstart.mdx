@@ -1,80 +1,243 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get Budgetron up and running in minutes with Docker
 ---
 
-## Get started in three steps
+# Quickstart Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+Get Budgetron running on your system in under 5 minutes using Docker. This guide will walk you through the fastest path to a working installation.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This quickstart uses Docker for the simplest setup. For other installation methods, see the [Installation Guide](/installation).
+</Note>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- **Docker** installed and running ([Get Docker](https://docs.docker.com/get-docker/))
+- **PostgreSQL database** accessible (local or hosted)
+- **10 minutes** of your time
+
+## Quick Setup
+
+<Steps>
+  <Step title="Clone the Repository">
+    First, clone the Budgetron repository to your local machine:
+    
+    ```bash
+    git clone https://github.com/raghavan-dev/budgetron.git
+    cd budgetron
+    ```
+  </Step>
+
+  <Step title="Set Up Environment Variables">
+    Copy the example environment file and configure your settings:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Open `.env` in your favorite editor and configure the required variables:
+    
+    ```bash
+    # Required: Authentication
+    AUTH_SECRET="your-secret-key-here"  # Generate with: openssl rand -base64 32
+    AUTH_URL="http://localhost:3000"
+    
+    # Required: Database
+    DB_URL="postgresql://user:password@host:5432/budgetron"
+    
+    # Required: Cron Jobs
+    CRON_SECRET_SLUG="your-cron-slug"
+    CRON_SECRET_TOKEN="your-cron-token"
+    ```
+    
+    <Tip>
+      Generate a secure `AUTH_SECRET` using: `openssl rand -base64 32`
+    </Tip>
+    
+    <Accordion title="Optional: Enable AI Categorization">
+      For AI-powered transaction categorization, add these variables:
+      
+      ```bash
+      # Using Ollama locally
+      OPENAI_COMPATIBLE_PROVIDER="ollama"
+      OPENAI_COMPATIBLE_BASE_URL="http://localhost:11434/v1"
+      OPENAI_COMPATIBLE_API_KEY="ollama"  # Ollama doesn't need a real key
+      OPENAI_COMPATIBLE_MODEL="llama3"
+      ```
+      
+      Or use a hosted provider like OpenAI or Groq:
+      
+      ```bash
+      OPENAI_COMPATIBLE_PROVIDER="openai"
+      OPENAI_COMPATIBLE_BASE_URL="https://api.openai.com/v1"
+      OPENAI_COMPATIBLE_API_KEY="sk-..."
+      OPENAI_COMPATIBLE_MODEL="gpt-4"
+      ```
+    </Accordion>
+    
+    <Accordion title="Optional: Enable Google Sign-In">
+      To enable Google OAuth authentication:
+      
+      ```bash
+      GOOGLE_CLIENT_ID="your-google-client-id"
+      GOOGLE_CLIENT_SECRET="your-google-client-secret"
+      ```
+    </Accordion>
+  </Step>
+
+  <Step title="Build the Docker Image">
+    Build the Budgetron Docker image:
+    
+    ```bash
+    docker build -t budgetron .
+    ```
+    
+    <Note>
+      The build process includes dependency installation, Next.js compilation, and migration tooling setup. This may take 5-10 minutes on first build.
+    </Note>
+  </Step>
+
+  <Step title="Run the Container">
+    Start Budgetron with your environment variables:
+    
+    ```bash
+    docker run -d \
+      --name budgetron \
+      --env-file .env \
+      -p 3000:3000 \
+      budgetron
+    ```
+    
+    Or pass environment variables directly:
+    
+    ```bash
+    docker run -d \
+      --name budgetron \
+      -e DB_URL="postgresql://user:password@host:5432/budgetron" \
+      -e AUTH_SECRET="your-secret-key" \
+      -e AUTH_URL="http://localhost:3000" \
+      -e CRON_SECRET_SLUG="your-slug" \
+      -e CRON_SECRET_TOKEN="your-token" \
+      -p 3000:3000 \
+      budgetron
+    ```
+    
+    <Tip>
+      Want to run on a different port? Use `-p 8080:3000` to expose on port 8080 instead.
+    </Tip>
+  </Step>
+
+  <Step title="Verify It's Running">
+    Check the container logs to ensure everything started correctly:
+    
+    ```bash
+    docker logs -f budgetron
+    ```
+    
+    You should see:
+    
+    ```
+    ⏳ Waiting for database using DB_URL...
+    📦 Running DB migration...
+    ✅ DB migration completed.
+    🚀 Starting server...
+    ```
+    
+    <Note>
+      The container automatically waits for the database to be ready, runs migrations, and starts the server.
+    </Note>
+  </Step>
+
+  <Step title="Access Budgetron">
+    Open your browser and navigate to:
+    
+    ```
+    http://localhost:3000
+    ```
+    
+    You should see the Budgetron login page. Create your first account and start budgeting!
+    
+    <Check>
+      Congratulations! You've successfully deployed Budgetron.
+    </Check>
+  </Step>
+</Steps>
+
+## What Happens on Startup?
+
+The Docker container runs through an automated startup sequence:
+
+1. **Database Health Check** - Waits up to 30 seconds for PostgreSQL to be ready
+2. **Schema Migration** - Automatically applies all pending Drizzle ORM migrations
+3. **Server Start** - Launches the Next.js production server
+
+This ensures your database is always up-to-date with the latest schema changes.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Authentication" icon="key" href="/configuration/authentication">
+    Set up Google OAuth or custom OAuth providers
+  </Card>
+  
+  <Card title="Enable AI Features" icon="brain" href="/configuration/ai-providers">
+    Configure AI-powered transaction categorization
+  </Card>
+  
+  <Card title="Production Deployment" icon="server" href="/deployment/production">
+    Deploy Budgetron to production with best practices
+  </Card>
+  
+  <Card title="Development Guide" icon="code" href="/development/local-setup">
+    Set up your local development environment
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Container exits immediately">
+    Check the logs with `docker logs budgetron`. Common issues:
+    
+    - **Missing environment variables**: Ensure `AUTH_SECRET`, `AUTH_URL`, `DB_URL`, `CRON_SECRET_SLUG`, and `CRON_SECRET_TOKEN` are set
+    - **Database connection failed**: Verify your `DB_URL` is correct and the database is accessible
+  </Accordion>
+  
+  <Accordion title="Database connection timeout">
+    If you see `DB unavailable after 30s`, your database might not be accessible:
+    
+    - Verify the PostgreSQL server is running
+    - Check firewall rules allow connections
+    - Ensure credentials in `DB_URL` are correct
+    - If using Docker networking, use the container name instead of `localhost`
+  </Accordion>
+  
+  <Accordion title="Port already in use">
+    If port 3000 is already in use:
+    
+    ```bash
+    docker run -d \
+      --name budgetron \
+      --env-file .env \
+      -p 8080:3000 \
+      budgetron
+    ```
+    
+    Then access Budgetron at `http://localhost:8080`
+  </Accordion>
+  
+  <Accordion title="Migration errors">
+    If migrations fail:
+    
+    1. Ensure the database user has CREATE TABLE permissions
+    2. Check if the database already has conflicting tables
+    3. Review migration logs: `docker logs budgetron | grep migration`
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  For more detailed troubleshooting, see the [Installation Guide](/installation) or join our community discussions.
 </Note>

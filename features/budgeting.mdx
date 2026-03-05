@@ -1,0 +1,132 @@
+---
+title: Budgeting
+description: Track and manage your spending with category-based budgets
+---
+
+## Overview
+
+Budgetron's budgeting feature helps you monitor spending by category and stay within your financial goals. Set monthly spending limits for expense categories and track your progress with real-time insights and projections.
+
+## Key Features
+
+### Budget Creation
+
+Create budgets by selecting an expense category and setting a monthly spending limit:
+
+- **Category Selection**: Choose any expense category to track
+- **Monthly Limit**: Set your target spending amount per month
+- **Automatic Tracking**: Budgets automatically monitor related transactions
+
+### Budget Metrics
+
+Each budget displays comprehensive spending analytics:
+
+- **This Month Spend**: Current month's spending against the budget
+- **Last Month Spend**: Previous month's actual spending
+- **Projected Spend**: Estimated month-end spending based on current pace
+- **YTD Spend**: Year-to-date spending for the category
+- **1-Year Average**: Monthly average spending over the past year
+- **3-Month Average**: Monthly average spending over the last 3 months
+
+### Visual Progress Tracking
+
+Budgets include visual indicators to help you quickly assess your spending:
+
+- Progress bars showing percentage of budget used
+- Historical spending charts by month
+- Color-coded alerts for overspending
+
+## User Workflow
+
+### Creating a Budget
+
+1. Navigate to the **Budgets** page from the dashboard
+2. Click the **Add** button
+3. Select an expense category from the dropdown
+4. Enter your monthly spending limit
+5. Click **Create** to save
+
+### Viewing Budget Details
+
+1. From the Budgets page, click **Show details** on any budget card
+2. View detailed monthly spending history
+3. Analyze trends with the monthly spending chart
+4. Compare actual spending against your budget limit
+
+### Updating a Budget
+
+1. Click the options menu (⋮) on a budget card
+2. Select **Edit**
+3. Modify the category or spending limit
+4. Save changes
+
+### Deleting a Budget
+
+1. Click the options menu (⋮) on a budget card
+2. Select **Delete**
+3. Confirm the deletion
+
+## Budget Calculations
+
+### Monthly Averages
+
+Budgetron calculates two types of monthly averages:
+
+- **1-Year Average**: Sum of monthly spending over 12 months divided by number of months
+- **3-Month Average**: Sum of monthly spending over 3 months divided by 3
+
+These averages help you set realistic budget targets based on historical data.
+
+### Projected Spending
+
+Projected spend estimates your month-end total using this formula:
+
+```
+Projected Spend = (Current Month Spend / Days Elapsed) × Days in Month
+```
+
+This projection updates daily to give you early warnings about potential overspending.
+
+## Empty State
+
+When you haven't created any budgets yet, you'll see a helpful prompt to create your first budget. This ensures you can start tracking spending immediately.
+
+## Technical Details
+
+### Data Structure
+
+Budgets are stored with the following key information:
+
+- Budget ID
+- User ID
+- Category ID (linked to expense category)
+- Monthly amount limit
+- Creation and update timestamps
+
+### API Integration
+
+Budget data is accessed through the RPC API:
+
+- `budgets.summary()`: Fetches all budgets with spending metrics
+- `budgets.details()`: Fetches detailed history for a specific budget
+- `budgets.create()`: Creates a new budget
+- `budgets.update()`: Updates an existing budget
+- `budgets.delete()`: Removes a budget
+
+## Best Practices
+
+<Tip>
+  Start by creating budgets for your largest spending categories. This gives
+  you the most impact for tracking and reducing expenses.
+</Tip>
+
+<Warning>
+  Budgets only track **expense** categories. Income and transfer categories
+  cannot be budgeted.
+</Warning>
+
+## Related Features
+
+- [Categories](/features/categories) - Learn about expense categories
+- [Transactions](/features/transactions) - Track spending that affects budgets
+- [Reports](/features/reports) - Analyze spending patterns across categories

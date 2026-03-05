@@ -1,0 +1,534 @@
+---
+title: 'Self-Hosting Guide'
+description: 'Deploy Budgetron on your own infrastructure using Docker, VPS, or PaaS platforms'
+---
+
+Budgetron can be self-hosted on any infrastructure that supports Docker or Node.js applications. This guide covers deployment options ranging from simple VPS setups to container orchestration platforms.
+
+## Prerequisites
+
+Before deploying Budgetron, ensure you have:
+
+- **PostgreSQL Database** (version 14 or higher)
+- **Node.js 20+** (if running without Docker)
+- **Docker** (recommended for containerized deployments)
+- **2GB RAM minimum** (4GB recommended)
+- **1 CPU core minimum** (2+ recommended)
+- **10GB storage** (for application and database)
+
+## Deployment Options
+
+### Option 1: Docker on VPS
+
+The simplest self-hosting approach using a Linux VPS.
+
+#### 1. Set Up PostgreSQL
+
+Install PostgreSQL on your VPS:
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# Start and enable PostgreSQL
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+Create a database and user:
+
+```bash
+sudo -u postgres psql
+```
+
+```sql
+CREATE DATABASE budgetron;
+CREATE USER budgetron WITH PASSWORD 'secure_password';
+GRANT ALL PRIVILEGES ON DATABASE budgetron TO budgetron;
+ALTER DATABASE budgetron OWNER TO budgetron;
+\q
+```
+
+#### 2. Install Docker
+
+```bash
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+```
+
+Log out and back in for group changes to take effect.
+
+#### 3. Create Environment File
+
+Create a `.env` file with your configuration:
+
+```bash
+mkdir -p ~/budgetron
+cd ~/budgetron
+cat > .env << 'EOF'
+DB_URL=postgres://budgetron:secure_password@localhost:5432/budgetron
+AUTH_SECRET=$(openssl rand -base64 32)
+AUTH_URL=https://budgetron.yourdomain.com
+CRON_SECRET_SLUG=$(openssl rand -hex 16)
+CRON_SECRET_TOKEN=$(openssl rand -hex 32)
+
+# Optional: Google OAuth
+# GOOGLE_CLIENT_ID=your-client-id
+# GOOGLE_CLIENT_SECRET=your-client-secret
+
+# Optional: AI Categorization
+# OPENAI_COMPATIBLE_PROVIDER=ollama
+# OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
+# OPENAI_COMPATIBLE_MODEL=llama3
+
+# Optional: Email (Resend)
+# EMAIL_PROVIDER_API_KEY=re_xxxx
+# EMAIL_PROVIDER_FROM_EMAIL=noreply@yourdomain.com
+EOF
+```
+
+Generate secure secrets:
+
+```bash
+sed -i "s/\$(openssl rand -base64 32)/$(openssl rand -base64 32)/" .env
+sed -i "s/\$(openssl rand -hex 16)/$(openssl rand -hex 16)/" .env
+sed -i "s/\$(openssl rand -hex 32)/$(openssl rand -hex 32)/" .env
+```
+
+#### 4. Run Budgetron
+
+```bash
+docker run -d \
+  --name budgetron \
+  --restart unless-stopped \
+  --network host \
+  --env-file .env \
+  ghcr.io/budgetron-org/budgetron:latest
+```
+
+#### 5. Set Up Reverse Proxy
+
+Install and configure Nginx:
+
+```bash
+sudo apt install nginx certbot python3-certbot-nginx
+```
+
+Create Nginx configuration:
+
+```bash
+sudo nano /etc/nginx/sites-available/budgetron
+```
+
+```nginx
+server {
+    listen 80;
+    server_name budgetron.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Enable the site:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/budgetron /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+Obtain SSL certificate:
+
+```bash
+sudo certbot --nginx -d budgetron.yourdomain.com
+```
+
+### Option 2: Docker Compose Stack
+
+Deploy Budgetron with all dependencies using Docker Compose.
+
+Create `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: budgetron
+      POSTGRES_USER: budgetron
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U budgetron"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - budgetron
+
+  app:
+    image: ghcr.io/budgetron-org/budgetron:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DB_URL: postgres://budgetron:${DB_PASSWORD:-changeme}@postgres:5432/budgetron
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL}
+      CRON_SECRET_SLUG: ${CRON_SECRET_SLUG}
+      CRON_SECRET_TOKEN: ${CRON_SECRET_TOKEN}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      OPENAI_COMPATIBLE_PROVIDER: ${OPENAI_COMPATIBLE_PROVIDER:-}
+      OPENAI_COMPATIBLE_BASE_URL: ${OPENAI_COMPATIBLE_BASE_URL:-}
+      OPENAI_COMPATIBLE_API_KEY: ${OPENAI_COMPATIBLE_API_KEY:-}
+      OPENAI_COMPATIBLE_MODEL: ${OPENAI_COMPATIBLE_MODEL:-}
+      EMAIL_PROVIDER_API_KEY: ${EMAIL_PROVIDER_API_KEY:-}
+      EMAIL_PROVIDER_FROM_EMAIL: ${EMAIL_PROVIDER_FROM_EMAIL:-}
+      BLOB_READ_WRITE_TOKEN: ${BLOB_READ_WRITE_TOKEN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - budgetron
+
+networks:
+  budgetron:
+
+volumes:
+  postgres_data:
+```
+
+Create `.env` file:
+
+```bash
+DB_PASSWORD=secure_database_password
+AUTH_SECRET=your_auth_secret_here
+AUTH_URL=https://budgetron.yourdomain.com
+CRON_SECRET_SLUG=your_slug
+CRON_SECRET_TOKEN=your_token
+```
+
+Start the stack:
+
+```bash
+docker compose up -d
+```
+
+### Option 3: Standalone Node.js
+
+Run Budgetron without Docker.
+
+#### 1. Install Dependencies
+
+```bash
+# Install Node.js 20 via nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+nvm use 20
+
+# Install pnpm
+npm install -g pnpm
+```
+
+#### 2. Clone and Build
+
+```bash
+git clone https://github.com/budgetron-org/budgetron.git
+cd budgetron
+pnpm install
+pnpm run build
+```
+
+#### 3. Configure Environment
+
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+nano .env
+```
+
+#### 4. Run Migrations
+
+```bash
+pnpm run db:migrate
+```
+
+#### 5. Start Server
+
+```bash
+# Development
+pnpm run dev
+
+# Production
+pnpm run start
+```
+
+For production, use a process manager:
+
+```bash
+npm install -g pm2
+pm2 start pnpm --name budgetron -- start
+pm2 save
+pm2 startup
+```
+
+### Option 4: Platform as a Service (PaaS)
+
+Deploy to PaaS platforms with minimal configuration.
+
+#### Railway
+
+1. Fork the Budgetron repository
+2. Create new project on [Railway](https://railway.app)
+3. Add PostgreSQL database service
+4. Connect your GitHub repository
+5. Add environment variables in Railway dashboard
+6. Deploy automatically on push
+
+#### Render
+
+1. Create new Web Service on [Render](https://render.com)
+2. Connect repository: `https://github.com/budgetron-org/budgetron`
+3. Configure:
+   - **Build Command**: `pnpm install && pnpm run build`
+   - **Start Command**: `pnpm start`
+4. Add PostgreSQL database
+5. Set environment variables
+6. Deploy
+
+#### Fly.io
+
+Create `fly.toml`:
+
+```toml
+app = "budgetron"
+primary_region = "iad"
+
+[build]
+  image = "ghcr.io/budgetron-org/budgetron:latest"
+
+[env]
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 3000
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+```
+
+Deploy:
+
+```bash
+fly launch
+fly postgres create
+fly secrets set AUTH_SECRET=$(openssl rand -base64 32)
+fly secrets set AUTH_URL=https://budgetron.fly.dev
+fly secrets set CRON_SECRET_SLUG=$(openssl rand -hex 16)
+fly secrets set CRON_SECRET_TOKEN=$(openssl rand -hex 32)
+fly deploy
+```
+
+## Database Management
+
+### Backups
+
+Automate PostgreSQL backups:
+
+```bash
+#!/bin/bash
+# /usr/local/bin/backup-budgetron.sh
+
+BACKUP_DIR="/var/backups/budgetron"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+pg_dump -U budgetron budgetron | gzip > $BACKUP_DIR/budgetron_$DATE.sql.gz
+
+# Keep last 30 days
+find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
+```
+
+Schedule with cron:
+
+```bash
+sudo crontab -e
+```
+
+```
+0 2 * * * /usr/local/bin/backup-budgetron.sh
+```
+
+### Restore from Backup
+
+```bash
+gunzip -c /var/backups/budgetron/budgetron_20260305_020000.sql.gz | \
+  psql -U budgetron budgetron
+```
+
+## Updates and Maintenance
+
+### Updating Docker Deployment
+
+```bash
+# Pull latest image
+docker pull ghcr.io/budgetron-org/budgetron:latest
+
+# Stop and remove old container
+docker stop budgetron
+docker rm budgetron
+
+# Start new container with same configuration
+docker run -d \
+  --name budgetron \
+  --restart unless-stopped \
+  --network host \
+  --env-file .env \
+  ghcr.io/budgetron-org/budgetron:latest
+```
+
+### Updating Docker Compose
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+### Updating Standalone
+
+```bash
+cd ~/budgetron
+git pull origin master
+pnpm install
+pnpm run build
+pnpm run db:migrate
+pm2 restart budgetron
+```
+
+## Monitoring
+
+### Container Logs
+
+```bash
+# Docker
+docker logs -f budgetron
+
+# Docker Compose
+docker compose logs -f app
+
+# PM2
+pm2 logs budgetron
+```
+
+### Resource Usage
+
+```bash
+# Docker stats
+docker stats budgetron
+
+# System resources
+htop
+```
+
+### Application Health
+
+Check if the application is responding:
+
+```bash
+curl http://localhost:3000
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+Verify PostgreSQL is running:
+
+```bash
+sudo systemctl status postgresql
+psql -U budgetron -d budgetron -h localhost
+```
+
+### Container Won't Start
+
+Check logs for errors:
+
+```bash
+docker logs budgetron
+```
+
+Common issues:
+- Invalid `DB_URL` format
+- Database not accessible
+- Missing required environment variables
+
+### Port Already in Use
+
+Find and kill the process:
+
+```bash
+sudo lsof -i :3000
+sudo kill -9 <PID>
+```
+
+### Migration Failures
+
+Run migrations manually:
+
+```bash
+# Docker
+docker exec -it budgetron sh
+node drizzle/migrate/migrate.cjs \
+  --db-url="$DB_URL" \
+  --migrations-folder="drizzle/migrations"
+
+# Standalone
+pnpm run db:migrate
+```
+
+## Security Considerations
+
+- Use strong, unique passwords for database and auth secrets
+- Keep PostgreSQL on localhost or private network
+- Enable SSL/TLS for all external connections
+- Regularly update Budgetron and dependencies
+- Use firewall to restrict access (ufw, iptables)
+- Enable automatic security updates on your VPS
+
+See [Production Setup](/deployment/production) for comprehensive security hardening.
+
+## Next Steps
+
+- [Docker Deployment](/deployment/docker) - Docker-specific configuration
+- [Production Setup](/deployment/production) - Production best practices
+- [Environment Variables](/configuration/environment-variables) - Complete configuration reference

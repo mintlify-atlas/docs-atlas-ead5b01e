@@ -1,0 +1,293 @@
+---
+title: User API
+description: API endpoints for user account management
+---
+
+The User API provides endpoints for managing user profiles, settings, authentication, and account linking.
+
+## getUserSettings
+
+Get the current user's settings including default currency and preferences.
+
+```typescript
+await client.user.getUserSettings()
+```
+
+### Parameters
+
+No parameters required.
+
+### Response
+
+Returns the user's settings object.
+
+<ResponseField name="userId" type="string">
+  User ID
+</ResponseField>
+
+<ResponseField name="defaultCurrency" type="string">
+  Default currency code for the user
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Settings creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Last update timestamp
+</ResponseField>
+
+## updateCurrency
+
+Update the user's default currency.
+
+```typescript
+await client.user.updateCurrency({
+  currency: "EUR"
+})
+```
+
+### Parameters
+
+<ParamField path="currency" type="CurrencyCode" required>
+  New default currency code (e.g., "USD", "EUR", "GBP")
+</ParamField>
+
+### Response
+
+Returns the updated user settings object.
+
+## updateInfo
+
+Update user profile information.
+
+```typescript
+await client.user.updateInfo({
+  name: "John Doe",
+  image: profileImageFile // or image URL string
+})
+```
+
+### Parameters
+
+<ParamField path="name" type="string" required>
+  User's display name (cannot be empty)
+</ParamField>
+
+<ParamField path="image" type="File | string">
+  Profile image as a File object or URL string. If a File is provided, it will be uploaded to blob storage.
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns `true` if the update was successful
+</ResponseField>
+
+## updatePassword
+
+Change the user's password.
+
+```typescript
+await client.user.updatePassword({
+  oldPassword: "current-password",
+  newPassword: "new-password"
+})
+```
+
+### Parameters
+
+<ParamField path="oldPassword" type="string" required>
+  Current password (cannot be empty)
+</ParamField>
+
+<ParamField path="newPassword" type="string" required>
+  New password (must meet password policy requirements)
+</ParamField>
+
+<Info>
+  The new password must meet the application's password policy requirements.
+</Info>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns `true` if the password was changed successfully
+</ResponseField>
+
+## verifyEmail
+
+Send a verification email to the user's email address.
+
+```typescript
+await client.user.verifyEmail()
+```
+
+### Parameters
+
+No parameters required. Uses the authenticated user's email.
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns `true` if the verification email was sent successfully
+</ResponseField>
+
+## listAccounts
+
+List all linked authentication accounts for the user.
+
+```typescript
+await client.user.listAccounts()
+```
+
+### Parameters
+
+No parameters required.
+
+### Response
+
+Returns an array of linked account objects.
+
+<ResponseField name="accounts" type="array">
+  Array of linked account information
+</ResponseField>
+
+Each account object includes:
+
+<ResponseField name="providerId" type="string">
+  Authentication provider ID (e.g., "google", "custom-oauth-provider")
+</ResponseField>
+
+<ResponseField name="accountId" type="string">
+  Account identifier with the provider
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  When the account was linked
+</ResponseField>
+
+## linkAccount
+
+Link a new authentication provider to the user's account.
+
+```typescript
+await client.user.linkAccount({
+  providerId: "google"
+})
+```
+
+### Parameters
+
+<ParamField path="providerId" type="enum" required>
+  Provider to link: `google` or `custom-oauth-provider`
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns `true` if linking was initiated successfully
+</ResponseField>
+
+<ResponseField name="redirectUrl" type="string">
+  OAuth redirect URL for completing the linking process (if applicable)
+</ResponseField>
+
+<Note>
+  After calling this endpoint, redirect the user to the provided `redirectUrl` to complete the OAuth flow. They will be redirected back to the account settings page.
+</Note>
+
+## unlinkAccount
+
+Unlink an authentication provider from the user's account.
+
+```typescript
+await client.user.unlinkAccount({
+  providerId: "google"
+})
+```
+
+### Parameters
+
+<ParamField path="providerId" type="enum" required>
+  Provider to unlink: `google` or `custom-oauth-provider`
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns `true` if the account was unlinked successfully
+</ResponseField>
+
+<Warning>
+  Ensure the user has at least one authentication method remaining before unlinking an account.
+</Warning>
+
+## deleteAccount
+
+Permanently delete the user's account and all associated data.
+
+```typescript
+await client.user.deleteAccount({
+  password: "user-password" // Required for email/password accounts
+})
+```
+
+### Parameters
+
+<ParamField path="password" type="string">
+  User's password (required for accounts with email/password credentials)
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns `true` if the account was deleted successfully
+</ResponseField>
+
+<Warning>
+  This action is irreversible and will permanently delete:
+  - User profile and settings
+  - All transactions
+  - All bank accounts
+  - All budgets
+  - All custom categories
+  - All linked accounts
+</Warning>
+
+<Info>
+  The delete account feature must be enabled via feature flag. If disabled, users should contact support to delete their account.
+</Info>
+
+## TypeScript Types
+
+```typescript
+type UserSettings = {
+  userId: string
+  defaultCurrency: CurrencyCode
+  createdAt: Date
+  updatedAt: Date
+}
+
+type UpdateInfoInput = {
+  name: string
+  image?: File | string
+}
+
+type UpdatePasswordInput = {
+  oldPassword: string
+  newPassword: string
+}
+
+type LinkAccountInput = {
+  providerId: "google" | "custom-oauth-provider"
+}
+
+type UnlinkAccountInput = {
+  providerId: "google" | "custom-oauth-provider"
+}
+
+type DeleteAccountInput = {
+  password?: string
+}
+```

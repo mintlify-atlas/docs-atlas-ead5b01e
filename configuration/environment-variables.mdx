@@ -1,0 +1,92 @@
+---
+title: Environment Variables
+description: Complete reference for all environment variables in Budgetron
+---
+
+Budgetron uses environment variables for configuration. These should be configured in a `.env` file at the root of your project or passed in at container runtime.
+
+## Quick Start
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+## Environment Variable Reference
+
+### Core Configuration
+
+<ParamField path="NODE_ENV" type="string" default="development">
+  The environment the application is running in.
+  
+  **Options:** `development`, `test`, `production`
+  
+  **Required:** No (defaults to `development`)
+</ParamField>
+
+### Docker Configuration
+
+<ParamField path="DOCKER_PORT" type="number" default="3000">
+  Port to expose the container on. Only used for Docker deployments.
+  
+  **Required:** No
+  
+  **Example:** `3000`
+</ParamField>
+
+## Configuration by Category
+
+Environment variables are organized into the following categories:
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/configuration/authentication">
+    Configure authentication providers and settings
+  </Card>
+  <Card title="Database" icon="database" href="/configuration/database">
+    Configure PostgreSQL database connection
+  </Card>
+  <Card title="AI Providers" icon="brain" href="/configuration/ai-providers">
+    Configure OpenAI-compatible AI providers
+  </Card>
+  <Card title="Email" icon="envelope" href="/configuration/email">
+    Configure email service for notifications
+  </Card>
+  <Card title="Blob Storage" icon="cloud" href="/configuration/blob-storage">
+    Configure file upload and storage
+  </Card>
+</CardGroup>
+
+## Validation
+
+All environment variables are validated at runtime using [Zod](https://zod.dev/) schemas defined in `src/env/server.ts`. If required variables are missing or invalid, the application will fail to start with a clear error message.
+
+### Validation Behavior
+
+- **Development:** All environment variables are validated on application start
+- **Production:** Environment variables are validated unless `CI=true` or `DOCKER=true` is set
+- **Empty strings:** Automatically converted to `undefined` for cleaner validation
+
+## Security Best Practices
+
+<Warning>
+  Never commit your `.env` file to version control. Always use `.env.example` as a template.
+</Warning>
+
+<Tip>
+  Use strong, randomly generated values for secrets like `AUTH_SECRET`, `CRON_SECRET_TOKEN`, and API keys.
+</Tip>
+
+### Generating Secure Secrets
+
+Generate a secure random secret for `AUTH_SECRET`:
+
+```bash
+openssl rand -base64 32
+```
+
+## Related Pages
+
+- [Authentication Configuration](/configuration/authentication)
+- [Database Configuration](/configuration/database)
+- [Deployment Guide](/deployment/docker)

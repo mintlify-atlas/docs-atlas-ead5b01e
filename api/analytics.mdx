@@ -1,0 +1,347 @@
+---
+title: Analytics API
+description: API endpoints for financial analytics and reports
+---
+
+The Analytics API provides endpoints for generating financial reports, spending analysis, and dashboard summaries.
+
+## getDashboardSummary
+
+Get a comprehensive dashboard summary including cash flow and overview statistics.
+
+```typescript
+await client.analytics.getDashboardSummary()
+```
+
+### Parameters
+
+No parameters required. Automatically uses the last 6 months for cash flow analysis.
+
+### Response
+
+<ResponseField name="cashFlowSummary" type="object">
+  Cash flow report for the last 6 months
+</ResponseField>
+
+<ResponseField name="overviewSummary" type="object">
+  Overview statistics including income, expenses, savings, and investments
+</ResponseField>
+
+See `getCashFlowReport` and the Overview Summary section below for detailed response structures.
+
+## getCashFlowReport
+
+Generate a cash flow report for a specific time range.
+
+```typescript
+await client.analytics.getCashFlowReport({
+  range: "last_6_months"
+})
+```
+
+### Parameters
+
+<ParamField path="range" type="enum" required>
+  Time range for the report:
+  - `this_month`: Current month
+  - `last_3_months`: Last 3 months
+  - `last_6_months`: Last 6 months
+  - `ytd`: Year to date
+  - `1_year`: Last 12 months
+  - `all`: All time
+</ParamField>
+
+### Response
+
+<ResponseField name="baseCurrency" type="string">
+  Base currency code for the report
+</ResponseField>
+
+<ResponseField name="convertedCurrencies" type="string[]">
+  Array of currency codes that were converted to base currency
+</ResponseField>
+
+<ResponseField name="currencyExchangeAttribution" type="object">
+  Attribution for currency exchange rate provider
+  - `text`: Attribution text
+  - `url`: Attribution URL
+</ResponseField>
+
+<ResponseField name="summary" type="object">
+  Summary statistics for the period
+</ResponseField>
+
+Summary object includes:
+
+<ResponseField name="summary.income" type="string">
+  Total income for the period
+</ResponseField>
+
+<ResponseField name="summary.expense" type="string">
+  Total expenses for the period
+</ResponseField>
+
+<ResponseField name="summary.transfer" type="string">
+  Total transfers for the period
+</ResponseField>
+
+<ResponseField name="summary.surplus" type="string">
+  Net surplus (income - expenses)
+</ResponseField>
+
+<ResponseField name="summary.monthlyAverageIncome" type="string">
+  Average monthly income
+</ResponseField>
+
+<ResponseField name="summary.monthlyAverageExpense" type="string">
+  Average monthly expenses
+</ResponseField>
+
+<ResponseField name="summary.monthlyAverageSurplus" type="string">
+  Average monthly surplus
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of cash flow data points by period
+</ResponseField>
+
+Each data point includes:
+
+<ResponseField name="period" type="string">
+  Period identifier (e.g., "2024-03", "2024-Q1")
+</ResponseField>
+
+<ResponseField name="income" type="string">
+  Income for the period
+</ResponseField>
+
+<ResponseField name="expenses" type="string">
+  Expenses for the period
+</ResponseField>
+
+<ResponseField name="transfers" type="string">
+  Transfers for the period
+</ResponseField>
+
+<ResponseField name="surplus" type="string">
+  Surplus for the period
+</ResponseField>
+
+<ResponseField name="convertedCurrencies" type="string[]">
+  Currencies converted in this period
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Metadata about the report
+</ResponseField>
+
+Metadata includes:
+
+<ResponseField name="meta.range" type="string">
+  The range parameter used
+</ResponseField>
+
+<ResponseField name="meta.startDate" type="Date">
+  Report start date
+</ResponseField>
+
+<ResponseField name="meta.endDate" type="Date">
+  Report end date
+</ResponseField>
+
+<ResponseField name="meta.granularity" type="enum">
+  Data granularity: `day`, `week`, `month`, or `quarter`
+</ResponseField>
+
+## getCategorySpend
+
+Get spending breakdown by category for a date range.
+
+```typescript
+await client.analytics.getCategorySpend({
+  from: new Date("2024-01-01"),
+  to: new Date("2024-03-31"),
+  limit: 10
+})
+```
+
+### Parameters
+
+<ParamField path="from" type="Date" required>
+  Start date for the analysis
+</ParamField>
+
+<ParamField path="to" type="Date" required>
+  End date for the analysis
+</ParamField>
+
+<ParamField path="limit" type="number" required>
+  Maximum number of categories to return (minimum: 1)
+</ParamField>
+
+### Response
+
+<ResponseField name="baseCurrency" type="string">
+  Base currency code
+</ResponseField>
+
+<ResponseField name="convertedCurrencies" type="string[]">
+  Array of converted currency codes
+</ResponseField>
+
+<ResponseField name="currencyExchangeAttribution" type="object">
+  Currency exchange attribution information
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of category spending data
+</ResponseField>
+
+Each category data object includes:
+
+<ResponseField name="categoryId" type="string">
+  Category ID
+</ResponseField>
+
+<ResponseField name="categoryName" type="string">
+  Category name
+</ResponseField>
+
+<ResponseField name="categoryIcon" type="string">
+  Category icon
+</ResponseField>
+
+<ResponseField name="categoryType" type="string">
+  Category type (EXPENSE)
+</ResponseField>
+
+<ResponseField name="parentCategoryId" type="string | null">
+  Parent category ID if applicable
+</ResponseField>
+
+<ResponseField name="parentCategoryName" type="string | null">
+  Parent category name
+</ResponseField>
+
+<ResponseField name="parentCategoryIcon" type="string | null">
+  Parent category icon
+</ResponseField>
+
+<ResponseField name="total" type="object">
+  Total spending for this category
+</ResponseField>
+
+Total object includes:
+
+<ResponseField name="total.baseCurrency" type="string">
+  Total in base currency
+</ResponseField>
+
+<ResponseField name="total.byCurrency" type="array">
+  Array of amounts by original currency
+</ResponseField>
+
+Each currency amount includes:
+- `currency`: Currency code
+- `amount`: Original amount
+- `convertedAmount`: Amount converted to base currency
+
+## getCategoryIncome
+
+Get income breakdown by category for a date range.
+
+```typescript
+await client.analytics.getCategoryIncome({
+  from: new Date("2024-01-01"),
+  to: new Date("2024-03-31"),
+  limit: 10
+})
+```
+
+### Parameters
+
+Same as `getCategorySpend`.
+
+### Response
+
+Same structure as `getCategorySpend`, but for income categories (type: INCOME).
+
+## Overview Summary
+
+The overview summary (part of `getDashboardSummary`) includes the following cash flow types:
+
+- **INCOME**: Total income
+- **EXPENSE**: Total expenses
+- **SAVINGS**: Savings transactions
+- **INVESTMENT**: Investment transactions
+
+For each cash flow type, the following periods are included:
+
+<ResponseField name="ytd" type="object">
+  Year-to-date totals
+</ResponseField>
+
+<ResponseField name="thisMonth" type="object">
+  Current month totals
+</ResponseField>
+
+<ResponseField name="lastMonth" type="object">
+  Last month totals
+</ResponseField>
+
+<ResponseField name="sixMonthAvg" type="object">
+  6-month average
+</ResponseField>
+
+Each period object includes:
+- `baseCurrency`: Amount in base currency
+- `byCurrency`: Array of amounts by currency with original and converted values
+
+## TypeScript Types
+
+```typescript
+type CashFlowReportRange = 
+  | "this_month"
+  | "last_3_months"
+  | "last_6_months"
+  | "ytd"
+  | "1_year"
+  | "all"
+
+type CashFlowReportGranularity = "day" | "week" | "month" | "quarter"
+
+type CashFlowReport = {
+  baseCurrency: CurrencyCode
+  convertedCurrencies: CurrencyCode[]
+  currencyExchangeAttribution?: {
+    text: string
+    url: string
+  }
+  summary: {
+    income: Intl.StringNumericLiteral
+    expense: Intl.StringNumericLiteral
+    transfer: Intl.StringNumericLiteral
+    surplus: Intl.StringNumericLiteral
+    monthlyAverageIncome: Intl.StringNumericLiteral
+    monthlyAverageExpense: Intl.StringNumericLiteral
+    monthlyAverageSurplus: Intl.StringNumericLiteral
+  }
+  data: CashFlowReportData[]
+  meta: {
+    range: CashFlowReportRange
+    startDate: Date
+    endDate: Date
+    granularity: CashFlowReportGranularity
+  }
+}
+
+type CategoryReport = {
+  baseCurrency: CurrencyCode
+  convertedCurrencies: CurrencyCode[]
+  currencyExchangeAttribution?: {
+    text: string
+    url: string
+  }
+  data: CategoryReportData[]
+}
+```

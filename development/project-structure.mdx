@@ -1,0 +1,153 @@
+---
+title: Project Structure
+description: Understanding Budgetron's codebase organization and feature-based architecture
+---
+
+Budgetron uses a feature-based architecture that organizes code by business domain rather than technical layers. This approach keeps related code together and makes the codebase easier to navigate as it grows.
+
+## Directory Overview
+
+```
+src/
+  app/         # Next.js App Router - route handlers and pages
+  components/  # Shared UI components (shadcn/ui and custom components)
+  data/        # Static data for the application
+  emails/      # React Email templates
+  env/         # Runtime environment variable validation
+  features/    # Business logic organized by domain
+  hooks/       # Custom React hooks
+  lib/         # Utility functions and helpers
+  providers/   # React context providers
+  rpc/         # oRPC configuration (client and server)
+  server/      # Server-side logic (DB, AI, email, auth)
+  types/       # TypeScript type definitions
+```
+
+## Feature-Based Architecture
+
+The `src/features/` directory contains self-contained modules for each business domain:
+
+### Available Features
+
+- **ai/** - AI-powered transaction categorization
+- **analytics/** - Reporting and data visualization
+- **auth/** - Authentication flows and components
+- **bank-accounts/** - Bank account management
+- **budgets/** - Budget creation and tracking
+- **categories/** - Transaction category management
+- **transactions/** - Transaction CRUD and import/export
+- **user/** - User profile and settings
+
+### Feature Module Structure
+
+Each feature typically contains:
+
+```
+features/[feature-name]/
+  components/     # React components specific to this feature
+  rpc/           # API procedures and router
+    procedures.ts # RPC endpoint implementations
+    router.ts     # Route definitions
+  service.ts     # Business logic and database operations
+  validators.ts  # Zod schemas for input validation
+  types.ts       # TypeScript types (optional)
+  utils.ts       # Feature-specific utilities (optional)
+```
+
+## App Router Structure
+
+The `src/app/` directory follows Next.js App Router conventions:
+
+```
+app/
+  (landing)/           # Landing page route group
+  api/                 # API routes
+    auth/             # BetterAuth endpoints
+    cron/             # Scheduled job endpoints
+    rpc/              # oRPC handler
+  auth/                # Authentication pages
+    forgot-password/
+    reset-password/
+    sign-in/
+    sign-up/
+  dashboard/           # Protected dashboard routes
+    account/          # User account settings
+    bank-accounts/    # Bank account management
+    budgets/          # Budget overview
+    reports/          # Analytics and reports
+    transactions/     # Transaction list
+    watchlist/        # Budget watchlist
+```
+
+## Server Layer
+
+The `src/server/` directory contains server-side infrastructure:
+
+### Database (`server/db/`)
+
+- **schema.ts** - Central export of all database schemas
+- **schemas/** - Individual table definitions using Drizzle ORM
+  - `user.ts`, `session.ts`, `account.ts` - Auth tables
+  - `bank-account.ts` - Bank accounts
+  - `transaction.ts` - Financial transactions
+  - `category.ts` - Transaction categories
+  - `budget.ts` - Budget definitions
+  - `currency-rate.ts` - Exchange rates
+  - `group.ts`, `group-user.ts` - Multi-user groups
+  - `user-settings.ts` - User preferences
+  - `feature-flags.ts` - Feature toggles
+  - `enums.ts` - Shared enum types
+
+### AI Service (`server/ai/`)
+
+- **model.ts** - LLM client configuration (OpenAI-compatible)
+- **service/** - AI-powered features
+  - `categorize-transactions/` - Auto-categorization logic
+  - `health/` - AI provider health checks
+
+### Authentication (`server/auth/`)
+
+- **config.ts** - BetterAuth configuration
+- **policies.ts** - Authorization rules
+- **index.ts** - Auth utilities and exports
+
+### Other Server Modules
+
+- **api/** - oRPC server configuration and routing
+- **blob/** - File upload service (Vercel Blob)
+- **email/** - Email service (Resend)
+- **flags/** - Feature flag management
+- **jobs/** - Background jobs (currency sync, etc.)
+
+## Shared Components
+
+The `src/components/` directory contains reusable UI components:
+
+- **form/** - Form components and inputs
+- **icons/** - Icon components
+- **layout/** - Layout components (header, sidebar, etc.)
+- **pickers/** - Specialized pickers (date, category, etc.)
+- **table/** - Data table components
+- **ui/** - shadcn/ui components
+- **widgets/** - Dashboard widgets and cards
+
+## Configuration Files
+
+Key configuration files in the project root:
+
+- **drizzle.config.ts** - Database ORM configuration
+- **next.config.ts** - Next.js configuration
+- **tsconfig.json** - TypeScript compiler options
+- **eslint.config.js** - Linting rules with boundaries plugin
+- **tailwind.config.ts** - Tailwind CSS configuration
+- **components.json** - shadcn/ui component configuration
+
+## Database Migrations
+
+Migrations are stored in `drizzle/migrations/` with:
+
+- **[number]_[description].sql** - Migration SQL files
+- **meta/** - Drizzle Kit metadata and snapshots
+- **migrate/** - Standalone migration runner for Docker
+
+For more details on working with migrations, see [Database Migrations](/development/database-migrations).

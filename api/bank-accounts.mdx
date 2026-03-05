@@ -1,0 +1,198 @@
+---
+title: Bank Accounts API
+description: API endpoints for managing bank accounts
+---
+
+The Bank Accounts API allows you to create, update, delete, and retrieve bank account information.
+
+## getAll
+
+Retrieve all bank accounts for the authenticated user.
+
+```typescript
+await client.bankAccounts.getAll()
+```
+
+### Parameters
+
+No parameters required.
+
+### Response
+
+Returns an array of bank account objects.
+
+<ResponseField name="id" type="string">
+  Bank account ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Account name
+</ResponseField>
+
+<ResponseField name="type" type="enum">
+  Account type: `CHECKING`, `CREDIT`, `INVESTMENT`, or `SAVINGS`
+</ResponseField>
+
+<ResponseField name="balance" type="string">
+  Current account balance
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Currency code (e.g., "USD", "EUR")
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Last update timestamp
+</ResponseField>
+
+## create
+
+Create a new bank account.
+
+```typescript
+await client.bankAccounts.create({
+  name: "Chase Checking",
+  type: "CHECKING",
+  balance: "1000.00",
+  currency: "USD"
+})
+```
+
+### Parameters
+
+<ParamField path="name" type="string" required>
+  Account name
+</ParamField>
+
+<ParamField path="type" type="enum" required>
+  Account type: `CHECKING`, `CREDIT`, `INVESTMENT`, or `SAVINGS`
+</ParamField>
+
+<ParamField path="balance" type="string">
+  Initial account balance (defaults to "0")
+</ParamField>
+
+<ParamField path="currency" type="CurrencyCode" required>
+  Currency code (e.g., "USD", "EUR", "GBP")
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Created bank account ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Account name
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Account type
+</ResponseField>
+
+<ResponseField name="balance" type="string">
+  Account balance
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Currency code
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Last update timestamp
+</ResponseField>
+
+## update
+
+Update an existing bank account.
+
+```typescript
+await client.bankAccounts.update({
+  id: "account-id",
+  name: "Chase Premium Checking",
+  type: "CHECKING",
+  balance: "1500.00"
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Bank account ID to update
+</ParamField>
+
+<ParamField path="name" type="string">
+  Updated account name
+</ParamField>
+
+<ParamField path="type" type="enum">
+  Updated account type: `CHECKING`, `CREDIT`, `INVESTMENT`, or `SAVINGS`
+</ParamField>
+
+<ParamField path="balance" type="string">
+  Updated account balance
+</ParamField>
+
+<Info>
+  The currency field cannot be updated after creation.
+</Info>
+
+### Response
+
+Returns the updated bank account object.
+
+## delete
+
+Delete a bank account.
+
+```typescript
+await client.bankAccounts.delete({
+  id: "account-id"
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Bank account ID to delete
+</ParamField>
+
+### Response
+
+Returns the deleted bank account object.
+
+<Warning>
+  Deleting a bank account will cascade delete all associated transactions.
+</Warning>
+
+## TypeScript Types
+
+```typescript
+type BankAccountType = "CHECKING" | "CREDIT" | "INVESTMENT" | "SAVINGS"
+
+type BankAccount = {
+  id: string
+  name: string
+  type: BankAccountType
+  balance: Intl.StringNumericLiteral
+  currency: CurrencyCode
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+## Constraints
+
+- Account name, type, and user combination must be unique
+- Account name cannot be empty
+- Balance defaults to "0" if not provided
+- Currency defaults to "USD" if not provided

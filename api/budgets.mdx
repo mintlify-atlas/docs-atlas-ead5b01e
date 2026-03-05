@@ -1,0 +1,269 @@
+---
+title: Budgets API
+description: API endpoints for managing category budgets
+---
+
+The Budgets API allows you to create, update, delete, and retrieve budget information for categories.
+
+## summary
+
+Get a summary of all budgets with spending data.
+
+```typescript
+await client.budgets.summary()
+```
+
+### Parameters
+
+No parameters required.
+
+### Response
+
+Returns an array of budget summaries with spending analytics.
+
+<ResponseField name="budgets" type="array">
+  Array of budget summary objects
+</ResponseField>
+
+Each budget summary includes:
+
+<ResponseField name="id" type="string">
+  Budget ID
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  Budget amount
+</ResponseField>
+
+<ResponseField name="categoryId" type="string">
+  Category ID
+</ResponseField>
+
+<ResponseField name="categoryName" type="string">
+  Category name
+</ResponseField>
+
+<ResponseField name="categoryIcon" type="string">
+  Category icon
+</ResponseField>
+
+<ResponseField name="parentCategoryId" type="string | null">
+  Parent category ID if this is a subcategory
+</ResponseField>
+
+<ResponseField name="parentCategoryName" type="string | null">
+  Parent category name
+</ResponseField>
+
+<ResponseField name="oneYearAverage" type="string">
+  Average spending over the past year
+</ResponseField>
+
+<ResponseField name="last3MonthAverage" type="string">
+  Average spending over the last 3 months
+</ResponseField>
+
+<ResponseField name="ytdSpend" type="string">
+  Year-to-date spending
+</ResponseField>
+
+<ResponseField name="lastMonthSpend" type="string">
+  Last month's spending
+</ResponseField>
+
+<ResponseField name="thisMonthSpend" type="string">
+  Current month's spending
+</ResponseField>
+
+<ResponseField name="projectedSpend" type="string">
+  Projected spending for the month
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Budget creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Budget last update timestamp
+</ResponseField>
+
+## details
+
+Get detailed budget information including monthly averages.
+
+```typescript
+await client.budgets.details({
+  id: "budget-id",
+  fromDate: new Date("2024-01-01"),
+  toDate: new Date("2024-12-31")
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Budget ID
+</ParamField>
+
+<ParamField path="fromDate" type="Date" required>
+  Start date for the analysis period
+</ParamField>
+
+<ParamField path="toDate" type="Date" required>
+  End date for the analysis period
+</ParamField>
+
+### Response
+
+<ResponseField name="budgetSummary" type="object">
+  Budget summary object (same structure as summary endpoint)
+</ResponseField>
+
+<ResponseField name="monthlyAverages" type="array">
+  Array of monthly average spending data
+</ResponseField>
+
+Each monthly average object includes:
+
+<ResponseField name="month" type="string">
+  Month identifier (e.g., "2024-01")
+</ResponseField>
+
+<ResponseField name="average" type="string">
+  Average spending for that month
+</ResponseField>
+
+## create
+
+Create a new budget for a category.
+
+```typescript
+await client.budgets.create({
+  categoryId: "category-id",
+  amount: "500.00"
+})
+```
+
+### Parameters
+
+<ParamField path="categoryId" type="string" required>
+  ID of the category to budget for
+</ParamField>
+
+<ParamField path="amount" type="string" required>
+  Budget amount as a string numeric literal (e.g., "500.00")
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Created budget ID
+</ResponseField>
+
+<ResponseField name="categoryId" type="string">
+  Category ID
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  Budget amount
+</ResponseField>
+
+<ResponseField name="createdAt" type="Date">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="Date">
+  Last update timestamp
+</ResponseField>
+
+## update
+
+Update an existing budget.
+
+```typescript
+await client.budgets.update({
+  id: "budget-id",
+  categoryId: "category-id",
+  amount: "600.00"
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Budget ID to update
+</ParamField>
+
+<ParamField path="categoryId" type="string" required>
+  Category ID
+</ParamField>
+
+<ParamField path="amount" type="string" required>
+  Updated budget amount
+</ParamField>
+
+### Response
+
+Returns the updated budget object.
+
+## delete
+
+Delete a budget.
+
+```typescript
+await client.budgets.delete({
+  id: "budget-id"
+})
+```
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Budget ID to delete
+</ParamField>
+
+### Response
+
+Returns the deleted budget object.
+
+## TypeScript Types
+
+```typescript
+type Budget = {
+  id: string
+  categoryId: string
+  userId: string
+  amount: Intl.StringNumericLiteral
+  createdAt: Date
+  updatedAt: Date
+}
+
+type BudgetWithRelations = Pick<
+  Budget,
+  "id" | "amount" | "createdAt" | "updatedAt"
+> & {
+  categoryId: string
+  categoryName: string
+  categoryIcon: string
+  parentCategoryId: string | null
+  parentCategoryName: string | null
+  parentCategoryIcon: string | null
+}
+
+type BudgetSummary = BudgetWithRelations & {
+  oneYearAverage: Intl.StringNumericLiteral
+  last3MonthAverage: Intl.StringNumericLiteral
+  ytdSpend: Intl.StringNumericLiteral
+  lastMonthSpend: Intl.StringNumericLiteral
+  thisMonthSpend: Intl.StringNumericLiteral
+  projectedSpend: Intl.StringNumericLiteral
+}
+
+type BudgetDetails = {
+  budgetSummary: BudgetSummary
+  monthlyAverages: {
+    month: string
+    average: Intl.StringNumericLiteral
+  }[]
+}
+```

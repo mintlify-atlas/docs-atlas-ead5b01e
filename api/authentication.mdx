@@ -1,0 +1,653 @@
+---
+title: Authentication
+description: Learn how authentication and session management works in Budgetron
+---
+
+## Overview
+
+Budgetron uses [BetterAuth](https://www.better-auth.com/) for authentication, providing a secure and flexible authentication system with support for multiple providers. All authentication is integrated with the oRPC API layer for type-safe auth operations.
+
+## Authentication Methods
+
+Budgetron supports multiple authentication methods:
+
+1. **Email & Password** - Traditional username/password authentication
+2. **Google OAuth** - Sign in with Google (optional)
+3. **Custom OAuth** - Generic OAuth 2.0 provider support (optional)
+
+## Configuration
+
+Authentication is configured in `src/server/auth/config.ts`:
+
+```typescript
+import { betterAuth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { nextCookies } from 'better-auth/next-js'
+
+export const authConfig = {
+  baseURL: env.AUTH_URL,
+  secret: env.AUTH_SECRET,
+  database: drizzleAdapter(db, {
+    provider: 'pg',
+    schema: {
+      accounts: schema.AccountTable,
+      sessions: schema.SessionTable,
+      users: schema.UserTable,
+      verifications: schema.VerificationTable,
+    },
+  }),
+
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    async sendResetPassword(data) {
+      await sendEmail({
+        to: data.user.email,
+        subject: 'Your password reset link',
+        body: ResetPasswordEmail({
+          name: data.user.name,
+          resetPasswordUrl: data.url,
+          resetPasswordUrlExpiresIn: 15 * 60, // 15 minutes
+        }),
+      })
+    },
+  },
+
+  socialProviders: {
+    google: isGoogleAuthEnabled(env) ? {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      disableImplicitSignUp: true,
+      enabled: true,
+      prompt: 'select_account',
+    } : undefined,
+  },
+
+  plugins: [nextCookies()],
+}
+```
+
+## Session Management
+
+### Getting the Session
+
+The auth instance is a singleton that provides access to the current session:
+
+```typescript
+import { getAuth } from '~/server/auth'
+
+function getAuth() {
+  if (!_auth) {
+    _auth = betterAuth(authConfig)
+  }
+  return _auth
+}
+```
+
+### RPC Context
+
+Every RPC request includes the user's session in the context:
+
+```typescript
+async function createRPCContext(options: { headers: Headers }) {
+  const session = await getAuth().api.getSession({ 
+    headers: options.headers 
+  })
+  return { session, ...options }
+}
+```
+
+### Session Types
+
+```typescript
+type Auth = ReturnType<typeof getAuth>
+type Session = Auth['$Infer']['Session']
+type User = Session['user']
+
+// User object structure
+interface User {
+  id: string
+  email: string
+  name: string
+  image?: string
+  emailVerified: boolean
+  role: 'user' | 'admin'
+}
+```
+
+## Authentication Flow
+
+### Sign Up
+
+**Procedure**: `api.auth.signUp`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.signUp({
+  email: 'user@example.com',
+  name: 'John Doe',
+  password: 'secure-password-123',
+})
+
+// Returns: { success: true }
+```
+
+Implementation:
+
+```typescript
+const signUp = publicProcedure
+  .input(SignUpSchema)
+  .handler(async ({ context, input }) => {
+    const { email, name, password } = input
+    try {
+      await getAuth().api.signUpEmail({
+        body: { email, name, password },
+        headers: context.headers,
+      })
+      return { success: true }
+    } catch (error) {
+      // Handle APIError
+    }
+  })
+```
+
+**Post-Signup Flow**:
+
+1. User account is created
+2. Welcome email is sent automatically
+3. Email verification link is sent
+4. User is redirected to dashboard (if `autoSignIn: true`)
+
+### Sign In (Email & Password)
+
+**Procedure**: `api.auth.signIn`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.signIn({
+  email: 'user@example.com',
+  password: 'secure-password-123',
+})
+
+// Returns: { success: true }
+```
+
+Implementation:
+
+```typescript
+const signIn = publicProcedure
+  .input(SignInSchema)
+  .handler(async ({ context, input }) => {
+    try {
+      await getAuth().api.signInEmail({
+        body: input,
+        headers: context.headers,
+      })
+      return { success: true }
+    } catch (error) {
+      if (error instanceof APIError) {
+        throw createRPCErrorFromStatus(error.status, error.message)
+      }
+      throw createRPCErrorFromUnknownError(error)
+    }
+  })
+```
+
+### Sign In (Social Provider)
+
+**Procedure**: `api.auth.signInWithSocial`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.signInWithSocial({
+  provider: 'google',
+})
+
+// Returns: { success: true, redirectUrl: 'https://...' }
+
+// Redirect user to the OAuth provider
+window.location.href = result.redirectUrl
+```
+
+Implementation:
+
+```typescript
+const signInWithSocial = publicProcedure
+  .input(SignInWithSocialSchema)
+  .handler(async ({ context, input }) => {
+    const callbackURL = PATHS.DASHBOARD
+    const requestSignUp = await signupFeatureFlag()
+    
+    const { url } = await getAuth().api.signInSocial({
+      body: {
+        provider: input.provider,
+        callbackURL,
+        requestSignUp,
+      },
+      headers: context.headers,
+    })
+    
+    return { success: true, redirectUrl: url }
+  })
+```
+
+### Sign In (Custom OAuth)
+
+**Procedure**: `api.auth.signInWithOAuth`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.signInWithOAuth({
+  providerId: 'custom-oauth-provider',
+})
+
+// Returns: { success: true, redirectUrl: 'https://...' }
+```
+
+### Get Current Session
+
+**Procedure**: `api.auth.session`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const session = await api.auth.session()
+
+if (session.session) {
+  console.log('User:', session.user.name)
+  console.log('Email:', session.user.email)
+} else {
+  console.log('Not authenticated')
+}
+```
+
+Implementation:
+
+```typescript
+const session = publicProcedure.handler(async ({ context }) => {
+  return getAuth().api.getSession({ headers: context.headers })
+})
+```
+
+### Sign Out
+
+**Procedure**: `api.auth.signOut`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.signOut()
+
+// Returns: { success: true, redirect: '/' }
+```
+
+Implementation:
+
+```typescript
+const signOut = publicProcedure.handler(async ({ context }) => {
+  await getAuth().api.signOut({
+    headers: context.headers,
+  })
+  return { success: true, redirect: '/' }
+})
+```
+
+## Password Reset Flow
+
+### Request Password Reset
+
+**Procedure**: `api.auth.forgotPassword`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.forgotPassword({
+  email: 'user@example.com',
+})
+
+// Returns: { success: true }
+```
+
+This sends a password reset email with a token that expires in 15 minutes.
+
+Implementation:
+
+```typescript
+const forgotPassword = publicProcedure
+  .input(ForgotPasswordSchema)
+  .handler(async ({ context, input }) => {
+    if (!(await forgotPasswordFeatureFlag())) {
+      throw new ORPCError('FORBIDDEN', {
+        message: 'Password reset is not available.',
+      })
+    }
+
+    const { status } = await getAuth().api.requestPasswordReset({
+      body: { 
+        email: input.email, 
+        redirectTo: PATHS.RESET_PASSWORD 
+      },
+      headers: context.headers,
+    })
+    
+    return { success: status }
+  })
+```
+
+### Reset Password
+
+**Procedure**: `api.auth.resetPassword`
+
+```typescript
+import { api } from '~/rpc/client'
+
+const result = await api.auth.resetPassword({
+  token: 'reset-token-from-email',
+  password: 'new-secure-password',
+})
+
+// Returns: { success: true }
+```
+
+Implementation:
+
+```typescript
+const resetPassword = publicProcedure
+  .input(ResetPasswordSchema)
+  .handler(async ({ context, input }) => {
+    const { status } = await getAuth().api.resetPassword({
+      body: {
+        newPassword: input.password,
+        token: input.token,
+      },
+      headers: context.headers,
+    })
+    return { success: status }
+  })
+```
+
+## Protected Procedures
+
+Protected procedures automatically verify authentication and provide a typed session:
+
+```typescript
+import { protectedProcedure } from '~/server/api/rpc'
+
+const createBudget = protectedProcedure
+  .input(CreateBudgetInputSchema)
+  .handler(async ({ context, input }) => {
+    // context.session is guaranteed to exist
+    const userId = context.session.user.id
+    
+    const budget = await insertBudget({
+      ...input,
+      userId,
+    })
+    
+    return budget
+  })
+```
+
+### Authorization Middleware
+
+The authorization middleware ensures only authenticated users can access protected procedures:
+
+```typescript
+const authorizationMiddleware = base.middleware(({ context, next }) => {
+  if (!context.session?.session) {
+    throw new ORPCError('UNAUTHORIZED')
+  }
+
+  return next({
+    context: {
+      // Infers the session as non-nullable
+      session: { ...context.session },
+    },
+  })
+})
+
+const protectedProcedure = base
+  .use(timingMiddleware)
+  .use(authorizationMiddleware)
+```
+
+## Client-Side Usage
+
+### React Component Example
+
+Here's a complete example of a password reset form:
+
+```typescript
+'use client'
+
+import { useMutation } from '@tanstack/react-query'
+import { api } from '~/rpc/client'
+import { ResetPasswordSchema } from '~/features/auth/validators'
+import { useAppForm } from '~/hooks/use-app-form'
+
+function ResetPasswordForm({ token }: { token: string }) {
+  const resetPassword = useMutation(
+    api.auth.resetPassword.mutationOptions()
+  )
+
+  const form = useAppForm({
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+      token,
+    },
+    validators: {
+      onSubmit: ResetPasswordSchema,
+    },
+    onSubmit({ value }) {
+      resetPassword.mutate(value)
+    },
+  })
+
+  if (resetPassword.isSuccess) {
+    return <div>Password reset successful! Please sign in.</div>
+  }
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault()
+      form.handleSubmit()
+    }}>
+      <input
+        type="password"
+        placeholder="New password"
+        {...form.register('password')}
+      />
+      <input
+        type="password"
+        placeholder="Confirm password"
+        {...form.register('confirmPassword')}
+      />
+      <button 
+        type="submit" 
+        disabled={resetPassword.isPending}
+      >
+        {resetPassword.isPending ? 'Resetting...' : 'Reset Password'}
+      </button>
+      {resetPassword.isError && (
+        <div>Error: {resetPassword.error.message}</div>
+      )}
+    </form>
+  )
+}
+```
+
+### Checking Authentication
+
+On the server side, you can require authentication:
+
+```typescript
+import { requireAuthentication } from '~/features/auth/utils'
+
+async function DashboardPage() {
+  // Throws error and redirects if not authenticated
+  await requireAuthentication()
+  
+  // User is authenticated, proceed
+  const data = await api.user.getDashboard()
+  return <div>Welcome, {data.user.name}!</div>
+}
+```
+
+## Email Verification
+
+### Automatic Email Sending
+
+When a user signs up, BetterAuth automatically sends a verification email:
+
+```typescript
+emailVerification: {
+  sendOnSignUp: true,
+  autoSignInAfterVerification: true,
+  async sendVerificationEmail(data) {
+    await sendEmail({
+      to: data.user.email,
+      subject: 'Your email verification link',
+      body: EmailVerificationEmail({
+        name: data.user.name,
+        emailVerificationUrl: data.url,
+        emailVerificationUrlExpiresIn: 15 * 60, // 15 minutes
+      }),
+    })
+  },
+  expiresIn: 15 * 60, // 15 minutes
+}
+```
+
+## Database Schema
+
+BetterAuth uses four main tables:
+
+### Users Table
+
+Stores user account information:
+
+```typescript
+{
+  id: string
+  email: string
+  name: string
+  image?: string
+  emailVerified: boolean
+  role: 'user' | 'admin'
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+### Sessions Table
+
+Stores active user sessions:
+
+```typescript
+{
+  id: string
+  userId: string
+  expiresAt: Date
+  token: string
+  ipAddress?: string
+  userAgent?: string
+}
+```
+
+### Accounts Table
+
+Stores OAuth provider connections:
+
+```typescript
+{
+  id: string
+  userId: string
+  provider: 'google' | 'custom-oauth-provider'
+  providerId: string
+  accessToken?: string
+  refreshToken?: string
+  expiresAt?: Date
+}
+```
+
+### Verifications Table
+
+Stores verification tokens:
+
+```typescript
+{
+  id: string
+  identifier: string // email or user ID
+  value: string // token
+  expiresAt: Date
+}
+```
+
+## Security Features
+
+### Token Expiration
+
+- **Password Reset Tokens**: 15 minutes
+- **Email Verification Tokens**: 15 minutes
+- **Delete Account Tokens**: 15 minutes
+
+### Account Linking
+
+Users can link multiple authentication providers to the same account:
+
+```typescript
+account: {
+  accountLinking: {
+    allowDifferentEmails: true,
+    enabled: true,
+  },
+}
+```
+
+### Disable Implicit Sign-Up
+
+For OAuth providers, implicit sign-up can be disabled to require manual user creation:
+
+```typescript
+socialProviders: {
+  google: {
+    disableImplicitSignUp: true,
+    // ...
+  },
+}
+```
+
+## Error Handling
+
+Authentication errors are handled consistently across all procedures:
+
+```typescript
+try {
+  await api.auth.signIn({ email, password })
+} catch (error) {
+  if (error.status === 'UNAUTHORIZED') {
+    // Invalid credentials
+  } else if (error.status === 'FORBIDDEN') {
+    // Feature disabled or insufficient permissions
+  } else {
+    // Other error
+  }
+}
+```
+
+Common auth error codes:
+
+- `UNAUTHORIZED` - Invalid credentials or no session
+- `FORBIDDEN` - Feature disabled or email not verified
+- `BAD_REQUEST` - Invalid input (e.g., weak password)
+- `CONFLICT` - Email already exists
+
+## Next Steps
+
+- [API Overview](/api/overview) - Learn about the complete API architecture
+- [Environment Variables](/configuration/environment-variables) - Configure authentication providers

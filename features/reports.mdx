@@ -1,0 +1,298 @@
+---
+title: Reports
+description: Analyze your finances with comprehensive reports and visualizations
+---
+
+## Overview
+
+Budgetron's reporting features provide deep insights into your financial patterns. Visualize cash flow, analyze spending by category, and track financial trends over time.
+
+## Report Types
+
+### Cash Flow Report
+
+Visualize income, expenses, and net cash flow over time:
+
+- **Income Tracking**: See all money coming in
+- **Expense Tracking**: Monitor all money going out
+- **Transfer Tracking**: Track account transfers
+- **Net Surplus/Deficit**: Calculate the difference between income and expenses
+- **Time-Based Visualization**: View trends by month, quarter, or year
+
+### Category Report
+
+Analyze spending and income by category:
+
+- **Spending Analysis**: Top expense categories over a period
+- **Income Analysis**: Income sources and amounts
+- **Category Ranking**: Sort by total amount
+- **Multi-Currency Support**: Converted to base currency
+- **Detailed Breakdown**: View category and parent category totals
+
+### Overview Summary
+
+Quick dashboard metrics showing:
+
+- **Year-to-Date (YTD)**: Total income and expenses for the current year
+- **This Month**: Current month's activity
+- **Last Month**: Previous month's comparison
+- **6-Month Average**: Rolling average for trend analysis
+- **Savings & Investments**: Track transfer activity to savings and investment accounts
+
+## Cash Flow Report
+
+### Report Granularity
+
+View cash flow at different time scales:
+
+**Month**
+- Daily granularity
+- Best for current month analysis
+- Highest detail level
+
+**Quarter**
+- Weekly granularity
+- Good for 3-month trends
+- Balance of detail and overview
+
+**Year**
+- Monthly granularity
+- Annual trend visualization
+- Year-over-year comparisons
+
+**All Time**
+- Monthly granularity
+- Complete financial history
+- Long-term pattern analysis
+
+### Cash Flow Metrics
+
+The cash flow report calculates:
+
+**Period Totals**
+- Total income for the period
+- Total expenses for the period
+- Total transfers
+- Net surplus (income - expenses)
+
+**Monthly Averages**
+- Average monthly income
+- Average monthly expenses
+- Average monthly surplus/deficit
+
+### Cash Flow Chart
+
+Interactive bar chart showing:
+
+- **Income Bars**: Money coming in (green)
+- **Expense Bars**: Money going out (red)
+- **Period Labels**: X-axis shows time periods
+- **Amount Scale**: Y-axis shows currency amounts
+- **Hover Details**: Tooltip with exact amounts
+
+<Info>
+  The chart automatically adjusts granularity based on your selected time range
+  to provide optimal visualization.
+</Info>
+
+## Category Report
+
+### Spending Report
+
+Analyze expense categories:
+
+1. Select a date range (default: current year)
+2. View top spending categories
+3. See category hierarchy (Parent / Subcategory)
+4. Review total spent per category
+5. Compare categories side-by-side
+
+### Income Report
+
+Analyze income sources:
+
+1. Toggle to "Income" tab
+2. View income categories
+3. See income sources breakdown
+4. Track income consistency
+5. Identify primary income sources
+
+### Category Metrics
+
+For each category, see:
+
+- **Category Name**: Parent / Subcategory format
+- **Category Icon**: Visual identifier
+- **Total Amount**: Sum of all transactions in period
+- **Currency Breakdown**: Original amounts by currency
+- **Percentage**: Share of total spending/income
+
+### Transaction Details
+
+Click on a category to see:
+
+- All transactions in that category
+- Individual transaction dates and amounts
+- Transaction descriptions
+- Filter by date range
+
+<Tip>
+  Use category reports to identify your largest spending areas and find
+  opportunities to reduce expenses or reallocate budget.
+</Tip>
+
+## Overview Summary
+
+### Dashboard Metrics
+
+The overview summary provides at-a-glance metrics:
+
+**Income Summary**
+- YTD total income
+- This month's income
+- Last month's income
+- 6-month average income
+
+**Expense Summary**
+- YTD total expenses
+- This month's expenses
+- Last month's expenses
+- 6-month average expenses
+
+**Savings Summary**
+- Transfers to savings accounts
+- YTD savings contributions
+- Monthly savings patterns
+
+**Investment Summary**
+- Transfers to investment accounts
+- YTD investment contributions
+- Monthly investment patterns
+
+### Cash Flow Types
+
+The summary categorizes transactions into:
+
+- **INCOME**: All income transactions
+- **EXPENSE**: All expense transactions
+- **SAVINGS**: Transfers to savings-type accounts
+- **INVESTMENT**: Transfers to investment-type accounts
+
+<Info>
+  Savings and investment tracking is based on the destination account type for
+  transfer transactions.
+</Info>
+
+## Multi-Currency Reporting
+
+All reports handle multiple currencies:
+
+- **Base Currency**: Set in user preferences
+- **Automatic Conversion**: Foreign currencies converted for reports
+- **Exchange Rates**: Updated regularly
+- **Currency Attribution**: Source of exchange rate data displayed
+- **Original Amounts**: Preserved for reference
+- **Converted Amounts**: Used for calculations and comparisons
+
+### Currency Notice
+
+When reports include converted currencies:
+
+- A notice displays which currencies were converted
+- Exchange rate source is attributed
+- Base currency is clearly indicated
+- Conversion happens transparently
+
+## Technical Details
+
+### Report Generation
+
+Reports are generated through the analytics service:
+
+**Data Aggregation**
+- SQL queries aggregate transaction data
+- Grouping by time period and category
+- Currency conversion applied
+- Missing periods filled with zeros
+
+**Performance Optimization**
+- Indexed database queries
+- Efficient aggregation using CTEs
+- Caching of exchange rates
+- Progressive data loading
+
+### API Endpoints
+
+- `analytics.getOverviewSummary()`: Dashboard metrics
+- `analytics.getCashFlowReport()`: Cash flow data and chart
+- `analytics.getCategoryReport()`: Category spending/income
+
+### Data Freshness
+
+Reports reflect real-time data:
+
+- Updates immediately after transaction changes
+- No caching or delays
+- Live calculations
+- Accurate to the moment
+
+## Report Calculations
+
+### Cash Flow Surplus
+
+```
+Surplus = Total Income - Total Expenses
+```
+
+- Positive surplus = saving money
+- Negative surplus = spending more than earning
+- Transfers don't affect surplus (they're between your accounts)
+
+### Monthly Averages
+
+```
+Monthly Average = Total Amount / Number of Months
+```
+
+- Calculated over complete months only
+- Partial months counted as full months
+- Minimum of 1 month to avoid division by zero
+
+### Projected Cash Flow
+
+For the current month:
+
+```
+Projected = (Amount to Date / Days Elapsed) × Days in Month
+```
+
+This estimates where you'll end up if current spending continues.
+
+## Best Practices
+
+<Tip>
+  Review cash flow reports monthly to spot spending patterns and adjust budgets
+  accordingly.
+</Tip>
+
+<Tip>
+  Use category reports to identify your top 5 spending categories, then create
+  budgets for those categories to control spending.
+</Tip>
+
+<Tip>
+  Compare this month to last month and to your 6-month average to detect
+  unusual spending or income changes.
+</Tip>
+
+<Warning>
+  Reports are only as accurate as your transaction data. Ensure all
+  transactions are properly categorized and assigned to the correct accounts.
+</Warning>
+
+## Related Features
+
+- [Transactions](/features/transactions) - Data source for all reports
+- [Categories](/features/categories) - Category-based analysis
+- [Budgeting](/features/budgeting) - Compare actuals to budgets
+- [Bank Accounts](/features/bank-accounts) - Account-level reporting

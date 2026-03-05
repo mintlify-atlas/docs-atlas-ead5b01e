@@ -1,0 +1,235 @@
+---
+title: Categories
+description: Organize transactions with hierarchical categories
+---
+
+## Overview
+
+Categories help you organize and analyze your financial transactions. Budgetron uses a two-level hierarchical system with parent categories and subcategories for flexible transaction classification.
+
+## Category Structure
+
+### Parent Categories
+
+Top-level categories that group related subcategories:
+
+**Income Categories**
+- Employment
+- Investments
+- Other Income
+
+**Expense Categories**
+- Housing
+- Transportation
+- Food & Dining
+- Shopping
+- Entertainment
+- Healthcare
+- Utilities
+- Personal Care
+- Education
+- Miscellaneous
+
+### Subcategories
+
+Specific classifications under parent categories:
+
+**Example: Food & Dining**
+- Groceries
+- Restaurants
+- Coffee Shops
+- Fast Food
+- Alcohol & Bars
+
+**Example: Transportation**
+- Gas & Fuel
+- Public Transit
+- Parking
+- Auto Insurance
+- Vehicle Maintenance
+
+<Info>
+  Transactions are assigned to subcategories, not parent categories. Parent
+  categories exist only for grouping and reporting.
+</Info>
+
+## Category Types
+
+Categories are typed based on transaction type:
+
+### Income Categories
+- Used for income transactions
+- Track sources of money coming in
+- Appear in income reports and analytics
+
+### Expense Categories
+- Used for expense transactions
+- Track where money is spent
+- Can be budgeted for spending control
+- Appear in expense reports and analytics
+
+<Warning>
+  Transfer transactions don't use categories. They simply move money between
+  accounts without affecting income or expense tracking.
+</Warning>
+
+## Category Scope
+
+### System Categories
+
+Built-in categories available to all users:
+- Pre-configured common categories
+- Cannot be edited or deleted
+- Provide a consistent starting point
+- Shared across the entire platform
+
+### User Categories
+
+Custom categories you create:
+- Specific to your account
+- Fully customizable
+- Can be edited or deleted
+- Private to your account
+
+### Group Categories
+
+Categories shared within a group:
+- Available to all group members
+- Useful for family or business expense tracking
+- Managed by group administrators
+
+<Info>
+  Group functionality may be a premium or future feature. Check your account
+  level for availability.
+</Info>
+
+## Using Categories
+
+### Assigning Categories to Transactions
+
+**During Transaction Creation**
+1. Select the transaction type (Income/Expense)
+2. Choose a category from the filtered list
+3. Only categories matching the transaction type appear
+
+**After Transaction Import**
+1. Review imported transactions
+2. Assign categories manually or use AI categorization
+3. Edit categories anytime from the transactions table
+
+**With AI Categorization**
+1. Enable auto-categorize during import
+2. AI analyzes transaction descriptions
+3. Suggests best-matching categories
+4. Review and adjust suggestions as needed
+
+### Category Filtering
+
+Categories filter based on:
+
+**Transaction Type**
+- Income transactions show only income categories
+- Expense transactions show only expense categories
+- This prevents mismatched categorization
+
+**Category Scope**
+- Your custom categories
+- System-wide default categories
+- Group categories (if in a group)
+
+## Technical Details
+
+### Data Structure
+
+Categories include:
+
+- `id`: Unique identifier
+- `name`: Category name
+- `icon`: Visual icon for UI display
+- `type`: INCOME or EXPENSE
+- `parentId`: Reference to parent category (null for parents)
+- `userId`: Creator of custom category (null for system categories)
+- `groupId`: Associated group (null for user/system categories)
+
+### Hierarchical Queries
+
+The category service provides two query methods:
+
+**findAllCategories**
+- Returns parent categories with nested subcategories
+- Useful for hierarchical displays and navigation
+- Groups subcategories by parent
+
+**findAllSubCategories**
+- Returns only subcategories with parent info
+- Useful for transaction assignment dropdowns
+- Flattened list for easier selection
+
+### API Integration
+
+Category operations:
+
+- `categories.getAll()`: Fetch all categories (hierarchical)
+- `categories.getSubCategories()`: Fetch only subcategories
+- `categories.create()`: Add a custom category
+- `categories.update()`: Modify a category
+- `categories.delete()`: Remove a category
+
+## Category Selection in Forms
+
+When selecting categories in transaction forms:
+
+1. Category field is filtered by transaction type
+2. Subcategories display with parent name: "Parent / Subcategory"
+3. Search/filter by typing category name
+4. Icons provide visual identification
+
+## Reports and Analytics
+
+Categories power several reporting features:
+
+**Category Reports**
+- See spending or income by category
+- Compare categories over time periods
+- Identify top spending categories
+- View category trends
+
+**Budget Tracking**
+- Create budgets for expense categories
+- Monitor category spending against limits
+- Get alerts for overspending
+
+**Cash Flow Reports**
+- Aggregate income and expenses by category
+- Visualize category contributions to cash flow
+- Analyze category patterns over time
+
+## Best Practices
+
+<Tip>
+  Use the most specific subcategory available. For example, "Restaurants"
+  instead of just "Food & Dining". This provides better insights in reports.
+</Tip>
+
+<Tip>
+  Create custom categories for recurring expenses unique to your situation, like
+  "Pet Care" or "Hobby Supplies".
+</Tip>
+
+<Tip>
+  Review uncategorized transactions regularly and assign categories to maintain
+  accurate reports and budgets.
+</Tip>
+
+<Warning>
+  Deleting a category that's used by transactions may cause those transactions
+  to become uncategorized. Consider reassigning transactions before deleting
+  categories.
+</Warning>
+
+## Related Features
+
+- [Transactions](/features/transactions) - Assign categories to transactions
+- [Budgeting](/features/budgeting) - Create budgets for expense categories
+- [AI Categorization](/features/ai-categorization) - Automatic category suggestions
+- [Reports](/features/reports) - Analyze spending by category

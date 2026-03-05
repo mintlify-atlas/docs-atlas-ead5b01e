@@ -1,0 +1,387 @@
+---
+title: AI Providers
+description: Configure OpenAI-compatible AI providers for transaction categorization
+---
+
+Budgetron supports AI-powered transaction categorization using any OpenAI-compatible API provider. This feature is **optional** but highly recommended for automatic transaction organization.
+
+<Info>
+  AI categorization is optional. If not configured, users must manually categorize transactions.
+</Info>
+
+## AI Provider Configuration
+
+All four environment variables must be set to enable AI features:
+
+<ParamField path="OPENAI_COMPATIBLE_PROVIDER" type="string">
+  Friendly name for the AI provider used in logs and debugging.
+  
+  **Example:** `ollama`, `openai`, `groq`, `together`, `anthropic`
+  
+  **Required:** Yes (if using AI features)
+</ParamField>
+
+<ParamField path="OPENAI_COMPATIBLE_BASE_URL" type="string">
+  Base URL of the provider's OpenAI-compatible API endpoint.
+  
+  **Example:** 
+  - `http://localhost:11434/v1` (Ollama)
+  - `https://api.openai.com/v1` (OpenAI)
+  - `https://api.groq.com/openai/v1` (Groq)
+  - `https://api.together.xyz/v1` (Together AI)
+  
+  **Required:** Yes (if using AI features)
+</ParamField>
+
+<ParamField path="OPENAI_COMPATIBLE_API_KEY" type="string">
+  API key for authenticating with the provider.
+  
+  **Example:** `sk-proj-abc123def456...` (OpenAI), `gsk_abc123...` (Groq)
+  
+  **Note:** Some local providers like Ollama don't require an API key. Use any string (e.g., `none` or `local`) as a placeholder.
+  
+  **Required:** Yes (if using AI features)
+</ParamField>
+
+<ParamField path="OPENAI_COMPATIBLE_MODEL" type="string">
+  Name of the specific model to use for transaction categorization.
+  
+  **Example:** 
+  - `llama3.2` (Ollama)
+  - `gpt-4o-mini` (OpenAI)
+  - `llama-3.1-70b-versatile` (Groq)
+  - `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo` (Together AI)
+  
+  **Required:** Yes (if using AI features)
+</ParamField>
+
+## Supported Providers
+
+Budgetron works with any provider that implements the OpenAI API format:
+
+### Local Providers
+
+<AccordionGroup>
+  <Accordion title="Ollama (Recommended for Self-Hosting)" icon="llama">
+    Run LLMs locally with [Ollama](https://ollama.ai/).
+    
+    **Setup:**
+    ```bash
+    # Install Ollama
+    curl -fsSL https://ollama.ai/install.sh | sh
+    
+    # Pull a model
+    ollama pull llama3.2
+    
+    # Start Ollama (runs on port 11434)
+    ollama serve
+    ```
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="ollama"
+    OPENAI_COMPATIBLE_BASE_URL="http://localhost:11434/v1"
+    OPENAI_COMPATIBLE_API_KEY="none"
+    OPENAI_COMPATIBLE_MODEL="llama3.2"
+    ```
+    
+    **Recommended Models:**
+    - `llama3.2` - Fast and efficient (3B)
+    - `llama3.1` - More capable (8B)
+    - `mistral` - Excellent for structured output
+    - `mixtral` - High-quality categorization (47B)
+  </Accordion>
+  
+  <Accordion title="LocalAI" icon="microchip">
+    Self-hosted OpenAI alternative with GPU support.
+    
+    **Setup:** Follow [LocalAI documentation](https://localai.io/basics/getting_started/)
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="localai"
+    OPENAI_COMPATIBLE_BASE_URL="http://localhost:8080/v1"
+    OPENAI_COMPATIBLE_API_KEY="none"
+    OPENAI_COMPATIBLE_MODEL="your-model-name"
+    ```
+  </Accordion>
+  
+  <Accordion title="LM Studio" icon="desktop">
+    Desktop app for running LLMs locally with a GUI.
+    
+    **Setup:**
+    1. Download [LM Studio](https://lmstudio.ai/)
+    2. Load a model
+    3. Start the local server (default port: 1234)
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="lmstudio"
+    OPENAI_COMPATIBLE_BASE_URL="http://localhost:1234/v1"
+    OPENAI_COMPATIBLE_API_KEY="none"
+    OPENAI_COMPATIBLE_MODEL="your-loaded-model"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Cloud Providers
+
+<AccordionGroup>
+  <Accordion title="OpenAI" icon="openai">
+    Official OpenAI API with GPT models.
+    
+    **Setup:**
+    1. Create account at [platform.openai.com](https://platform.openai.com/)
+    2. Generate API key in dashboard
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="openai"
+    OPENAI_COMPATIBLE_BASE_URL="https://api.openai.com/v1"
+    OPENAI_COMPATIBLE_API_KEY="sk-proj-your-api-key-here"
+    OPENAI_COMPATIBLE_MODEL="gpt-4o-mini"
+    ```
+    
+    **Recommended Models:**
+    - `gpt-4o-mini` - Cost-effective and fast
+    - `gpt-4o` - Most capable
+    - `gpt-3.5-turbo` - Budget option
+  </Accordion>
+  
+  <Accordion title="Groq" icon="bolt">
+    Ultra-fast inference with Llama models.
+    
+    **Setup:**
+    1. Sign up at [groq.com](https://console.groq.com/)
+    2. Generate API key
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="groq"
+    OPENAI_COMPATIBLE_BASE_URL="https://api.groq.com/openai/v1"
+    OPENAI_COMPATIBLE_API_KEY="gsk_your-api-key-here"
+    OPENAI_COMPATIBLE_MODEL="llama-3.1-70b-versatile"
+    ```
+    
+    **Recommended Models:**
+    - `llama-3.1-70b-versatile` - Best quality
+    - `llama-3.1-8b-instant` - Fastest
+    - `mixtral-8x7b-32768` - Long context
+  </Accordion>
+  
+  <Accordion title="Together AI" icon="circle-nodes">
+    Access to 100+ open-source models.
+    
+    **Setup:**
+    1. Sign up at [together.ai](https://together.ai/)
+    2. Get API key from dashboard
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="together"
+    OPENAI_COMPATIBLE_BASE_URL="https://api.together.xyz/v1"
+    OPENAI_COMPATIBLE_API_KEY="your-api-key-here"
+    OPENAI_COMPATIBLE_MODEL="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+    ```
+  </Accordion>
+  
+  <Accordion title="Azure OpenAI" icon="microsoft">
+    Enterprise OpenAI API through Azure.
+    
+    **Setup:** Follow [Azure OpenAI documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
+    
+    **Configuration:**
+    ```bash
+    OPENAI_COMPATIBLE_PROVIDER="azure-openai"
+    OPENAI_COMPATIBLE_BASE_URL="https://your-resource.openai.azure.com/openai/deployments"
+    OPENAI_COMPATIBLE_API_KEY="your-azure-api-key"
+    OPENAI_COMPATIBLE_MODEL="your-deployment-name"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## AI Service Implementation
+
+The AI service is implemented using the [Vercel AI SDK](https://sdk.vercel.ai/) with structured output support.
+
+### Service Detection
+
+The application checks if AI is enabled at runtime using `isAIServiceEnabled()` defined in `src/server/ai/utils.ts`. All four environment variables must be set for the service to be active.
+
+### Model Requirements
+
+<Warning>
+  The model must support **structured outputs** (JSON mode) for transaction categorization to work correctly.
+</Warning>
+
+Most modern models support this feature:
+- ✅ GPT-4, GPT-4o, GPT-3.5-turbo
+- ✅ Llama 3.x models
+- ✅ Mistral, Mixtral
+- ✅ Qwen models
+- ❌ Older models may not support structured output
+
+### AI Categorization Process
+
+1. User creates a transaction
+2. Transaction details sent to AI model
+3. Model analyzes merchant, amount, and description
+4. Returns structured categorization with confidence score
+5. Category applied to transaction
+
+Implementation: `src/server/ai/service/categorize-transactions/`
+
+## Performance Considerations
+
+### Local vs Cloud
+
+| Factor | Local (Ollama) | Cloud (OpenAI) |
+| --- | --- | --- |
+| **Cost** | Free | Pay per request |
+| **Speed** | Hardware dependent | Very fast |
+| **Privacy** | Complete control | Data sent to provider |
+| **Setup** | Requires installation | Just API key |
+| **Reliability** | Depends on hardware | Highly reliable |
+
+### Model Selection
+
+For transaction categorization:
+- **Fast categorization:** Use smaller models (3B-8B parameters)
+- **High accuracy:** Use larger models (70B+ parameters)
+- **Balanced:** 8B-13B parameter models work well
+
+### Rate Limiting
+
+Budgetron does not implement rate limiting. Consider:
+- API provider rate limits
+- Local hardware capabilities
+- Transaction volume
+
+## Health Check
+
+Budgetron includes an AI health check endpoint:
+
+```typescript
+// Health check available at /api/ai/health
+// Returns: { healthy: true } or { healthy: false }
+```
+
+Implementation: `src/server/ai/service/health/index.ts`
+
+## Troubleshooting
+
+### AI Features Not Working
+
+<AccordionGroup>
+  <Accordion title="Service Not Enabled" icon="circle-xmark">
+    **Error:** "AI service is not enabled"
+    
+    **Solution:** Verify all four environment variables are set:
+    ```bash
+    echo $OPENAI_COMPATIBLE_PROVIDER
+    echo $OPENAI_COMPATIBLE_BASE_URL
+    echo $OPENAI_COMPATIBLE_API_KEY
+    echo $OPENAI_COMPATIBLE_MODEL
+    ```
+    
+    All must return non-empty values.
+  </Accordion>
+  
+  <Accordion title="Connection Failed" icon="wifi-slash">
+    **Error:** "Failed to connect to AI provider"
+    
+    **Solutions:**
+    - Verify `OPENAI_COMPATIBLE_BASE_URL` is correct
+    - For local providers, ensure service is running
+    - Check firewall/network settings
+    - Test connection: `curl $OPENAI_COMPATIBLE_BASE_URL/models`
+  </Accordion>
+  
+  <Accordion title="Authentication Failed" icon="key">
+    **Error:** "Invalid API key" or "Unauthorized"
+    
+    **Solutions:**
+    - Verify `OPENAI_COMPATIBLE_API_KEY` is correct
+    - Check API key hasn't expired
+    - For OpenAI, ensure billing is set up
+    - For local providers, try `OPENAI_COMPATIBLE_API_KEY="none"`
+  </Accordion>
+  
+  <Accordion title="Model Not Found" icon="circle-question">
+    **Error:** "Model not found" or "Invalid model"
+    
+    **Solutions:**
+    - Verify `OPENAI_COMPATIBLE_MODEL` name is correct
+    - For Ollama: Run `ollama list` to see available models
+    - For cloud providers: Check model availability in dashboard
+    - Pull model: `ollama pull llama3.2`
+  </Accordion>
+  
+  <Accordion title="Structured Output Not Supported" icon="brackets-curly">
+    **Error:** "Model does not support structured outputs"
+    
+    **Solutions:**
+    - Use a newer model that supports JSON mode
+    - For Ollama, update to latest version
+    - Try a different model from the recommended list
+  </Accordion>
+</AccordionGroup>
+
+### Testing AI Configuration
+
+Test your AI configuration:
+
+```bash
+# Test with curl (replace values)
+curl -X POST $OPENAI_COMPATIBLE_BASE_URL/chat/completions \
+  -H "Authorization: Bearer $OPENAI_COMPATIBLE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "'$OPENAI_COMPATIBLE_MODEL'",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
+Expected response: JSON with `choices` array containing the model response.
+
+## Cost Optimization
+
+### Local Deployment
+
+For free AI categorization:
+1. Install Ollama locally
+2. Pull a smaller model: `ollama pull llama3.2`
+3. Configure Budgetron to use local endpoint
+
+### Cloud Deployment
+
+To minimize costs:
+- Use `gpt-4o-mini` instead of `gpt-4o` (10x cheaper)
+- Use Groq for free tier (100K tokens/day)
+- Use Together AI for competitive pricing
+- Batch categorization requests when possible
+
+## Privacy and Security
+
+<Warning>
+  When using cloud AI providers, transaction data is sent to the provider for categorization. For sensitive financial data, consider using a local AI provider like Ollama.
+</Warning>
+
+### Data Handling
+
+- **Local providers:** Data never leaves your infrastructure
+- **Cloud providers:** Data sent via HTTPS to provider's API
+- **Data retention:** Varies by provider (check their policies)
+- **Compliance:** Ensure provider meets your compliance requirements
+
+### API Key Security
+
+- Never commit API keys to version control
+- Rotate API keys periodically
+- Use environment-specific keys
+- Monitor API usage for anomalies
+
+## Related Configuration
+
+- [Environment Variables](/configuration/environment-variables) - Complete environment reference
+- [Email Configuration](/configuration/email) - Configure email notifications

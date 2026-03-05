@@ -1,0 +1,352 @@
+---
+title: Contributing
+description: Guidelines for contributing to the Budgetron project
+---
+
+Thank you for your interest in contributing to Budgetron! This guide will help you get started with contributing to the codebase.
+
+## Getting Started
+
+### Prerequisites
+
+Before contributing, make sure you have:
+
+1. Completed the [Local Setup](/development/local-setup) guide
+2. Read the [Project Structure](/development/project-structure) documentation
+3. Familiarized yourself with the tech stack:
+   - Next.js 14 (App Router)
+   - TypeScript
+   - Drizzle ORM
+   - oRPC
+   - Tailwind CSS + shadcn/ui
+
+### Fork and Clone
+
+1. **Fork the repository** on GitHub
+2. **Clone your fork**:
+
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/budgetron.git
+   cd budgetron
+   ```
+
+3. **Add upstream remote**:
+
+   ```bash
+   git remote add upstream https://github.com/raghavan-dev/budgetron.git
+   ```
+
+## Development Workflow
+
+### 1. Create a Feature Branch
+
+Always create a new branch for your changes:
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
+Branch naming conventions:
+
+- `feature/` - New features
+- `fix/` - Bug fixes
+- `docs/` - Documentation updates
+- `refactor/` - Code refactoring
+- `test/` - Adding or updating tests
+
+### 2. Make Your Changes
+
+- Write clean, readable code that follows the existing patterns
+- Add comments for complex logic
+- Update relevant documentation
+- Test your changes thoroughly
+
+### 3. Follow Code Standards
+
+Budgetron uses automated tooling to maintain code quality:
+
+#### Linting
+
+Run ESLint to check for issues:
+
+```bash
+pnpm lint
+```
+
+The project uses:
+- ESLint with Next.js config
+- `eslint-plugin-boundaries` for architectural boundaries
+- `@tanstack/eslint-plugin-query` for React Query
+
+#### Formatting
+
+Format your code with Prettier:
+
+```bash
+pnpm format
+```
+
+Prettier is configured with:
+- Tailwind CSS plugin for class sorting
+- Automatic formatting on save (if using recommended VS Code settings)
+
+### 4. Pre-Commit Hooks
+
+Budgetron uses Husky and lint-staged to automatically format code before commits:
+
+```json
+"lint-staged": {
+  "**/*": "prettier --write --ignore-unknown"
+}
+```
+
+Your code will be automatically formatted when you commit.
+
+### 5. Commit Your Changes
+
+Write clear, descriptive commit messages:
+
+```bash
+git add .
+git commit -m "feat: add transaction export to CSV"
+```
+
+**Commit message format**:
+
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `style:` - Code style changes (formatting, etc.)
+- `refactor:` - Code refactoring
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+### 6. Keep Your Branch Updated
+
+Regularly sync with the upstream repository:
+
+```bash
+git fetch upstream
+git rebase upstream/master
+```
+
+### 7. Push Your Changes
+
+```bash
+git push origin feature/your-feature-name
+```
+
+### 8. Open a Pull Request
+
+1. Go to the [Budgetron repository](https://github.com/raghavan-dev/budgetron)
+2. Click **New Pull Request**
+3. Select your fork and branch
+4. Fill in the PR template with:
+   - Description of changes
+   - Related issue numbers
+   - Screenshots (for UI changes)
+   - Testing steps
+
+## Code Guidelines
+
+### Feature Development
+
+When adding a new feature:
+
+1. **Create a feature module** in `src/features/[feature-name]/`
+2. **Structure it following the pattern**:
+   ```
+   features/[feature-name]/
+     components/      # React components
+     rpc/
+       procedures.ts  # oRPC procedures
+       router.ts      # oRPC router
+     service.ts       # Business logic
+     validators.ts    # Zod schemas
+     types.ts         # TypeScript types (optional)
+   ```
+
+3. **Add database tables** in `src/server/db/schemas/`
+4. **Generate and apply migrations** (see [Database Migrations](/development/database-migrations))
+5. **Export feature router** from `src/server/api/router.ts`
+
+### Component Guidelines
+
+- Use shadcn/ui components when possible
+- Keep components small and focused
+- Use TypeScript for props
+- Co-locate component-specific styles
+
+**Example**:
+
+```tsx
+import { Button } from '@/components/ui/button'
+
+interface TransactionItemProps {
+  transaction: Transaction
+  onDelete: (id: number) => void
+}
+
+export function TransactionItem({ transaction, onDelete }: TransactionItemProps) {
+  return (
+    <div className="flex items-center justify-between">
+      <span>{transaction.description}</span>
+      <Button onClick={() => onDelete(transaction.id)} variant="destructive">
+        Delete
+      </Button>
+    </div>
+  )
+}
+```
+
+### API Development (oRPC)
+
+Follow the oRPC pattern:
+
+1. **Define validators** in `validators.ts`:
+
+   ```typescript
+   import { z } from 'zod'
+
+   export const createTransactionSchema = z.object({
+     description: z.string().min(1),
+     amount: z.number(),
+     categoryId: z.number().optional(),
+   })
+   ```
+
+2. **Implement procedures** in `rpc/procedures.ts`:
+
+   ```typescript
+   import { createTransactionSchema } from '../validators'
+   import { createTransaction } from '../service'
+
+   export const createTransactionProcedure = authedProcedure
+     .input(createTransactionSchema)
+     .mutation(async ({ input, ctx }) => {
+       return createTransaction(ctx.user.id, input)
+     })
+   ```
+
+3. **Export router** in `rpc/router.ts`:
+
+   ```typescript
+   export const transactionRouter = {
+     create: createTransactionProcedure,
+     list: listTransactionsProcedure,
+     // ...
+   }
+   ```
+
+### Database Guidelines
+
+- Define schemas in `src/server/db/schemas/`
+- Use Drizzle ORM helpers (`pgTable`, `serial`, `text`, etc.)
+- Follow snake_case for column names (handled by `casing: 'snake_case'`)
+- Add indexes for frequently queried columns
+- Use transactions for multi-step operations
+
+**Example schema**:
+
+```typescript
+import { pgTable, serial, text, decimal, timestamp } from 'drizzle-orm/pg-core'
+
+export const transactions = pgTable('transaction', {
+  id: serial('id').primaryKey(),
+  description: text('description').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+```
+
+## Testing
+
+### Manual Testing
+
+Before submitting a PR:
+
+1. Test your changes in the browser
+2. Test on different screen sizes (mobile, tablet, desktop)
+3. Test edge cases and error states
+4. Verify database migrations work correctly
+
+### Automated Testing
+
+While the project doesn't currently have a comprehensive test suite, contributions that add tests are welcome:
+
+- Unit tests for utility functions
+- Integration tests for API procedures
+- E2E tests for critical user flows
+
+## Pull Request Process
+
+### PR Checklist
+
+Before submitting, ensure:
+
+- [ ] Code follows project conventions
+- [ ] All lint checks pass (`pnpm lint`)
+- [ ] Code is formatted (`pnpm format`)
+- [ ] Changes are tested locally
+- [ ] Database migrations are included (if applicable)
+- [ ] Documentation is updated (if applicable)
+- [ ] Commit messages are clear and descriptive
+
+### Review Process
+
+1. **Maintainers will review** your PR
+2. **Address feedback** by pushing new commits
+3. **Keep discussions productive** and respectful
+4. **Squash commits** if requested before merging
+
+### After Your PR is Merged
+
+1. Delete your feature branch
+2. Update your fork:
+
+   ```bash
+   git checkout master
+   git pull upstream master
+   git push origin master
+   ```
+
+## Getting Help
+
+### Questions?
+
+- Check existing [GitHub Issues](https://github.com/raghavan-dev/budgetron/issues)
+- Review the [documentation](https://docs.budgetron.com)
+- Ask in PR comments or create a discussion
+
+### Found a Bug?
+
+1. Search existing issues
+2. Create a new issue with:
+   - Clear title and description
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Screenshots (if applicable)
+   - Environment details
+
+### Have a Feature Idea?
+
+1. Check if it's already requested
+2. Open an issue to discuss the feature
+3. Wait for feedback before starting work
+
+## Code of Conduct
+
+Be respectful and professional:
+
+- Use welcoming and inclusive language
+- Respect differing viewpoints
+- Accept constructive criticism gracefully
+- Focus on what's best for the project
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the same license as the project.
+
+## Recognition
+
+All contributors will be recognized in the project. Thank you for helping make Budgetron better!

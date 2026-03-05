@@ -1,0 +1,222 @@
+---
+title: Transactions
+description: Import, manage, and categorize all your financial transactions
+---
+
+## Overview
+
+Transactions are the core of Budgetron. Track income, expenses, and transfers between accounts with powerful filtering, bulk operations, and AI-powered categorization.
+
+## Transaction Types
+
+Budgetron supports three transaction types:
+
+### Income
+Money coming into your accounts:
+- Salary and wages
+- Investment returns
+- Gifts and reimbursements
+- Side income
+
+### Expense
+Money going out of your accounts:
+- Bills and utilities
+- Shopping and dining
+- Subscriptions
+- Healthcare costs
+
+### Transfer
+Money moving between your accounts:
+- Checking to savings transfers
+- Investment contributions
+- Account rebalancing
+- Cash deposits
+
+## Key Features
+
+### Transaction Management
+
+**View All Transactions**
+- Sortable table with all transaction details
+- Date range filtering (defaults to current year)
+- Search and filter by description, category, account, type, and tags
+- Multi-currency support with automatic conversion
+
+**Manual Entry**
+- Add individual transactions manually
+- Full control over date, amount, category, and notes
+- Support for custom tags
+- Link transactions to specific bank accounts
+
+**Bulk Import**
+- Import transactions from OFX/QFX files
+- Upload multiple files simultaneously
+- Preview and edit before saving
+- Duplicate detection using external IDs
+
+### Transaction Details
+
+Each transaction includes:
+
+- **Date**: When the transaction occurred
+- **Description**: Transaction details or merchant name
+- **Amount**: Transaction value in original currency
+- **Currency**: Original transaction currency
+- **Type**: Income, Expense, or Transfer
+- **Category**: Optional categorization for tracking
+- **Bank Account**: Source or destination account
+- **Tags**: Custom labels for organization
+- **Notes**: Additional context or reminders
+- **Cash Flow**: Indicates money IN or OUT
+
+### Advanced Filtering
+
+Filter transactions by multiple criteria:
+
+- **Description**: Free-text search
+- **Type**: Income, Expense, or Transfer
+- **Account**: One or multiple bank accounts
+- **Category**: One or multiple categories
+- **Tag**: One or multiple custom tags
+- **Date Range**: Custom start and end dates
+
+## User Workflows
+
+### Adding a Transaction Manually
+
+1. Go to the **Transactions** page
+2. Click the **Add** button
+3. Fill in transaction details:
+   - Select transaction type
+   - Enter date and amount
+   - Choose bank account
+   - Select category (optional)
+   - Add description and notes
+4. Click **Create** to save
+
+### Importing Transactions from OFX Files
+
+1. Click the **Import** button on the Transactions page
+2. Select your bank account
+3. Choose one or more OFX/QFX files
+4. Enable **Auto-categorize transactions** if AI service is available
+5. Click **Upload file**
+6. Review the parsed transactions in the preview table
+7. Edit categories, tags, or other details as needed
+8. Click **Upload transactions** to save
+
+<Info>
+  Budgetron automatically detects duplicate transactions using external IDs
+  from your bank's OFX file, preventing accidental double-imports.
+</Info>
+
+### Editing Transactions
+
+1. Find the transaction in the table
+2. Click the edit icon or double-click the row
+3. Modify any field
+4. Changes save automatically or click Save
+
+### Deleting Transactions
+
+**Single Transaction**
+1. Click the delete icon on a transaction row
+2. Confirm deletion
+
+**Multiple Transactions**
+1. Select transactions using checkboxes
+2. Click **Delete Selected**
+3. Confirm bulk deletion
+
+### Filtering Transactions
+
+1. Use the filter controls at the top of the table
+2. Enter description keywords or select filter values
+3. Apply multiple filters to narrow results
+4. Click **Reset Filters** to clear all filters
+
+## Multi-Currency Support
+
+Budgetron handles multiple currencies automatically:
+
+- Transactions are stored in their original currency
+- Amounts are converted to your base currency for reports
+- Currency exchange rates are fetched automatically
+- A notice displays when converted currencies are present
+
+<Tip>
+  Set your base currency in user settings to ensure accurate conversions across
+  all transactions and reports.
+</Tip>
+
+## Transaction Import Details
+
+### OFX File Format
+
+Budgetron supports the Open Financial Exchange (OFX) format:
+
+- `.ofx` files from most banks
+- `.qfx` files from Quicken-compatible sources
+- Multiple file uploads in a single import
+
+### Import Process
+
+1. **Parse**: Extract transaction data from OFX files
+2. **Categorize** (optional): AI suggests categories based on descriptions
+3. **Preview**: Review and edit transactions before saving
+4. **Save**: Insert transactions with conflict handling
+5. **Deduplicate**: Skip or update existing transactions by external ID
+
+### Auto-Categorization
+
+When AI service is enabled and healthy:
+
+- AI analyzes transaction descriptions
+- Suggests appropriate categories from your list
+- Uses fuzzy matching to find best category fit
+- Processes transactions in chunks for optimal performance
+
+<Warning>
+  Auto-categorization requires an AI service to be configured. If the service
+  is unavailable, this option will be disabled in the upload form.
+</Warning>
+
+## Technical Details
+
+### Data Structure
+
+Transactions include these fields:
+
+- `id`: Unique identifier
+- `externalId`: Bank-provided unique ID (for deduplication)
+- `userId`: Owner of the transaction
+- `bankAccountId`: Associated bank account
+- `categoryId`: Optional category assignment
+- `groupId`: Optional group assignment
+- `type`: INCOME, EXPENSE, or TRANSFER
+- `amount`: Transaction value
+- `currency`: Currency code (e.g., USD, EUR)
+- `date`: Transaction date
+- `description`: Transaction details
+- `notes`: User-added notes
+- `tags`: Array of custom labels
+- `fromBankAccountId`: Source account for transfers
+- `toBankAccountId`: Destination account for transfers
+
+### API Endpoints
+
+- `transactions.getByDateRange()`: Fetch transactions within date range
+- `transactions.create()`: Add a single transaction
+- `transactions.createMany()`: Bulk insert transactions
+- `transactions.update()`: Modify a transaction
+- `transactions.delete()`: Remove a transaction
+- `transactions.deleteMany()`: Bulk delete transactions
+- `transactions.parseOFX()`: Parse OFX files and return transaction data
+
+## Related Features
+
+- [Bank Accounts](/features/bank-accounts) - Manage accounts linked to transactions
+- [Categories](/features/categories) - Organize transactions by category
+- [AI Categorization](/features/ai-categorization) - Automatic category suggestions
+- [Budgeting](/features/budgeting) - Track spending against budgets
+- [Reports](/features/reports) - Analyze transaction patterns

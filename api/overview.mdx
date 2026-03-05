@@ -1,0 +1,375 @@
+---
+title: API Overview
+description: Learn about Budgetron's type-safe API architecture built with oRPC
+---
+
+## Introduction
+
+Budgetron uses [oRPC](https://orpc.unnoq.com/) to provide a fully type-safe API layer between the client and server. oRPC enables end-to-end type safety from your database to your UI components, catching errors at compile time rather than runtime.
+
+## Architecture
+
+### oRPC Foundation
+
+The API architecture is built on three key components:
+
+1. **Router Definition** - Centralized router that combines all feature routers
+2. **Procedures** - Type-safe endpoints with input validation using Zod schemas
+3. **Context** - Request context including authentication session
+
+### API Structure
+
+All API routes are defined in `src/server/api/router.ts`:
+
+```typescript
+import { aiRouter } from '~/features/ai/rpc/router'
+import { analyticsRouter } from '~/features/analytics/rpc/router'
+import { authRouter } from '~/features/auth/rpc/router'
+import { bankAccountsRouter } from '~/features/bank-accounts/rpc/router'
+import { budgetsRouter } from '~/features/budgets/rpc/router'
+import { categoriesRouter } from '~/features/categories/rpc/router'
+import { transactionsRouter } from '~/features/transactions/rpc/router'
+import { userRouter } from '~/features/user/rpc/router'
+import { base } from './rpc'
+
+const appRouter = base.router({
+  ai: aiRouter,
+  analytics: analyticsRouter,
+  auth: authRouter,
+  bankAccounts: bankAccountsRouter,
+  budgets: budgetsRouter,
+  categories: categoriesRouter,
+  transactions: transactionsRouter,
+  user: userRouter,
+})
+```
+
+## Available Routers
+
+### Authentication (`auth`)
+
+Handles user authentication and session management:
+
+- `signIn` - Email/password authentication
+- `signUp` - User registration
+- `signInWithSocial` - Social provider authentication (Google)
+- `signInWithOAuth` - Custom OAuth provider authentication
+- `signOut` - End user session
+- `session` - Get current session
+- `forgotPassword` - Request password reset
+- `resetPassword` - Reset password with token
+
+### Transactions (`transactions`)
+
+Manage financial transactions:
+
+- `create` - Create a single transaction
+- `createMany` - Bulk create transactions
+- `update` - Update transaction details
+- `delete` - Delete a transaction
+- `deleteMany` - Bulk delete transactions
+- `getByDateRange` - Fetch transactions within date range
+- `getByCategory` - Fetch transactions by category
+- `parseOFX` - Parse and import OFX bank files
+
+### Budgets (`budgets`)
+
+Manage budget tracking:
+
+- `create` - Create a new budget
+- `update` - Update budget details
+- `delete` - Delete a budget
+- `summary` - Get all budgets summary
+- `details` - Get detailed budget information
+
+### Bank Accounts (`bankAccounts`)
+
+Manage user bank accounts:
+
+- `create` - Add a new bank account
+- `update` - Update account details
+- `delete` - Remove a bank account
+- `getAll` - List all bank accounts
+
+### Categories (`categories`)
+
+Manage transaction categories:
+
+- `getAll` - Get all categories
+- `getAllSubCategories` - Get all subcategories
+
+### Analytics (`analytics`)
+
+Generate financial reports and insights:
+
+- `getDashboardSummary` - Get dashboard overview data
+- `getCashFlowReport` - Generate cash flow analysis
+- `getCategorySpend` - Analyze spending by category
+- `getCategoryIncome` - Analyze income by category
+
+### User (`user`)
+
+Manage user profile and accounts:
+
+- `listAccounts` - List connected accounts
+
+### AI (`ai`)
+
+AI-powered features for financial insights.
+
+## Making API Calls
+
+### Server-Side (React Server Components)
+
+Use the server RPC client to call procedures directly as functions:
+
+```typescript
+import { api } from '~/rpc/server'
+
+async function BudgetsPage() {
+  // Direct function call - no HTTP request
+  const budgets = await api.budgets.summary()
+  
+  return (
+    <div>
+      {budgets.map((budget) => (
+        <div key={budget.id}>{budget.name}</div>
+      ))}
+    </div>
+  )
+}
+```
+
+### Client-Side (React Query)
+
+Use the client RPC with React Query for data fetching:
+
+```typescript
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { api } from '~/rpc/client'
+
+function CashFlowReport() {
+  const { data, isPending } = useQuery(
+    api.analytics.getCashFlowReport.queryOptions({
+      input: { range: 'this_month' }
+    })
+  )
+
+  if (isPending) return <div>Loading...</div>
+  
+  return <div>Income: {data.totalIncome}</div>
+}
+```
+
+### Client-Side (Mutations)
+
+Use mutations for data modifications:
+
+```typescript
+'use client'
+
+import { useMutation } from '@tanstack/react-query'
+import { api } from '~/rpc/client'
+
+function CreateBudgetForm() {
+  const createBudget = useMutation(
+    api.budgets.create.mutationOptions()
+  )
+
+  const handleSubmit = (data) => {
+    createBudget.mutate({
+      categoryId: data.categoryId,
+      amount: data.amount,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* form fields */}
+    </form>
+  )
+}
+```
+
+## Type Safety
+
+### Input Types
+
+Infer input types from the router:
+
+```typescript
+import type { RouterInputs } from '~/rpc/client'
+
+type CreateTransactionInput = RouterInputs['transactions']['create']
+```
+
+### Output Types
+
+Infer output types from the router:
+
+```typescript
+import type { RouterOutputs } from '~/rpc/client'
+
+type Budget = RouterOutputs['budgets']['summary'][number]
+```
+
+## Request/Response Format
+
+### Standard Request
+
+All procedures accept an input object validated by Zod schemas:
+
+```typescript
+const transaction = await api.transactions.create({
+  amount: "150.00",
+  bankAccountId: "account-123",
+  categoryId: "category-456",
+  currency: "USD",
+  date: new Date("2024-03-01"),
+  description: "Grocery shopping",
+  type: "expense",
+})
+```
+
+### Standard Response
+
+Procedures return typed data directly:
+
+```typescript
+// Success response
+{
+  id: "txn-123",
+  amount: "150.00",
+  description: "Grocery shopping",
+  date: Date,
+  // ... other fields
+}
+```
+
+### Error Response
+
+Errors are thrown as `ORPCError` with standardized codes:
+
+```typescript
+try {
+  await api.auth.signIn({
+    email: "user@example.com",
+    password: "wrong"
+  })
+} catch (error) {
+  if (error.status === 'UNAUTHORIZED') {
+    console.error('Invalid credentials')
+  }
+}
+```
+
+Common error codes:
+
+- `UNAUTHORIZED` - Authentication required or invalid credentials
+- `FORBIDDEN` - Insufficient permissions
+- `BAD_REQUEST` - Invalid input data
+- `NOT_FOUND` - Resource not found
+- `INTERNAL_SERVER_ERROR` - Server error
+
+## Middleware
+
+### Authorization Middleware
+
+Protected procedures automatically verify authentication:
+
+```typescript
+const authorizationMiddleware = base.middleware(({ context, next }) => {
+  if (!context.session?.session) {
+    throw new ORPCError('UNAUTHORIZED')
+  }
+
+  return next({
+    context: {
+      session: { ...context.session },
+    },
+  })
+})
+```
+
+### Timing Middleware
+
+Logs execution time and adds artificial delay in development:
+
+```typescript
+const timingMiddleware = base.middleware(async ({ next, path }) => {
+  const start = performance.now()
+
+  if (process.env.NODE_ENV === 'development') {
+    // Simulates network latency
+    const waitMs = Math.floor(Math.random() * 400) + 100
+    await new Promise((resolve) => setTimeout(resolve, waitMs))
+  }
+
+  const result = await next()
+  const end = performance.now()
+  console.log(`[RPC] ${path} took ${end - start}ms to execute`)
+
+  return result
+})
+```
+
+## Batching
+
+The client automatically batches multiple requests into a single HTTP call:
+
+```typescript
+// These three calls are batched into one HTTP request
+const [budgets, accounts, categories] = await Promise.all([
+  api.budgets.summary(),
+  api.bankAccounts.getAll(),
+  api.categories.getAll(),
+])
+```
+
+To disable batching for a specific request:
+
+```typescript
+const data = await api.transactions.create(
+  { /* input */ },
+  { context: { skipBatch: true } }
+)
+```
+
+## Example: Complete Procedure
+
+Here's a complete example of a protected procedure:
+
+```typescript
+import { protectedProcedure } from '~/server/api/rpc'
+import { CreateTransactionInputSchema } from '../validators'
+import { insertTransaction } from '../service'
+
+const create = protectedProcedure
+  .input(CreateTransactionInputSchema)
+  .handler(async ({ context, input }) => {
+    const session = context.session
+
+    try {
+      const transaction = await insertTransaction({
+        amount: input.amount as Intl.StringNumericLiteral,
+        bankAccountId: input.bankAccountId,
+        categoryId: input.categoryId,
+        currency: input.currency,
+        date: input.date,
+        description: input.description,
+        type: input.type,
+        userId: session.user.id,
+      })
+      return transaction
+    } catch (error) {
+      throw createRPCErrorFromUnknownError(error)
+    }
+  })
+```
+
+## Next Steps
+
+- [Authentication](/api/authentication) - Learn about BetterAuth integration
+- [Contributing](/development/contributing) - Add new API endpoints

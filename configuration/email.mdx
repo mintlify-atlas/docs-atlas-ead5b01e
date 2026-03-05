@@ -1,0 +1,455 @@
+---
+title: Email
+description: Configure email service for notifications and password resets
+---
+
+Budgetron uses email for authentication-related notifications including password resets, email verification, account deletion confirmation, and welcome messages.
+
+<Info>
+  Email service is **optional** but required for password reset, email verification, and account deletion features.
+</Info>
+
+## Email Configuration
+
+Both environment variables must be set to enable email features:
+
+<ParamField path="EMAIL_PROVIDER_API_KEY" type="string">
+  API key for the email service provider.
+  
+  **Example:** `re_abc123def456...` (Resend)
+  
+  **Required:** Yes (if using email features)
+</ParamField>
+
+<ParamField path="EMAIL_PROVIDER_FROM_EMAIL" type="string">
+  Email address that emails will be sent from.
+  
+  **Example:** `noreply@yourdomain.com`, `hello@yourdomain.com`
+  
+  **Required:** Yes (if using email features)
+  
+  **Note:** Must be a verified domain with your email provider.
+</ParamField>
+
+## Email Provider
+
+Budgetron uses [Resend](https://resend.com/) as the default email provider. Resend offers:
+- Simple API integration
+- Free tier: 100 emails/day, 3,000/month
+- Excellent deliverability
+- Domain verification
+
+### Setting Up Resend
+
+1. Sign up at [resend.com](https://resend.com/)
+2. Verify your domain:
+   - Add DNS records provided by Resend
+   - Wait for verification (usually instant)
+3. Generate an API key in the dashboard
+4. Set environment variables:
+
+```bash
+EMAIL_PROVIDER_API_KEY="re_your_api_key_here"
+EMAIL_PROVIDER_FROM_EMAIL="noreply@yourdomain.com"
+```
+
+### Domain Verification
+
+<Warning>
+  You must verify your domain with Resend before sending emails. Without verification, emails will fail to send.
+</Warning>
+
+Add these DNS records to your domain:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| TXT | @ | `resend-verification=your-value` |
+| MX | @ | `feedback-smtp.resend.com` (priority 10) |
+| TXT | _dmarc | `v=DMARC1; p=none` |
+
+Verification usually takes a few minutes but can take up to 48 hours.
+
+## Email Templates
+
+Budgetron includes React-based email templates for all notification types:
+
+### Available Templates
+
+<CardGroup cols={2}>
+  <Card title="Welcome Email" icon="hand-wave">
+    Sent when a new user creates an account.
+    
+    **Template:** `src/emails/welcome-email.tsx`
+    
+    **Trigger:** User registration
+  </Card>
+  
+  <Card title="Email Verification" icon="envelope-circle-check">
+    Sent after sign-up with verification link.
+    
+    **Template:** `src/emails/email-verification-email.tsx`
+    
+    **Trigger:** New account creation
+    
+    **Expires:** 15 minutes
+  </Card>
+  
+  <Card title="Password Reset" icon="key">
+    Sent when user requests password reset.
+    
+    **Template:** `src/emails/reset-password-email.tsx`
+    
+    **Trigger:** Forgot password
+    
+    **Expires:** 15 minutes
+  </Card>
+  
+  <Card title="Delete Account" icon="trash">
+    Sent when user requests account deletion.
+    
+    **Template:** `src/emails/delete-account-email.tsx`
+    
+    **Trigger:** Delete account request
+    
+    **Expires:** 15 minutes
+  </Card>
+</CardGroup>
+
+### Template Features
+
+- Built with React components
+- Responsive design
+- Consistent branding
+- Secure, expiring links
+- Inline CSS for email client compatibility
+
+## Email Workflows
+
+### User Registration Flow
+
+1. User signs up with email and password
+2. **Welcome email** sent immediately
+3. **Email verification** sent with 15-minute token
+4. User clicks verification link
+5. Email marked as verified, auto sign-in
+
+### Password Reset Flow
+
+1. User clicks "Forgot password"
+2. **Password reset email** sent with 15-minute token
+3. User clicks reset link
+4. User enters new password
+5. Password updated, token invalidated
+
+### Account Deletion Flow
+
+1. User requests account deletion
+2. **Delete account email** sent with 15-minute confirmation token
+3. User clicks confirmation link
+4. Account and all data deleted permanently
+
+## Service Implementation
+
+The email service is implemented in `src/server/email/service.ts`:
+
+```typescript
+async function sendEmail({ to, subject, body }: SendEmailOptions) {
+  if (!isEmailServiceEnabled(env)) {
+    throw new Error('Email service is not enabled')
+  }
+  
+  const { data, error } = await getProvider().emails.send({
+    from: env.EMAIL_PROVIDER_FROM_EMAIL,
+    to,
+    subject,
+    react: body,
+  })
+  
+  if (error) throw new Error(error.message)
+  return data
+}
+```
+
+### Service Detection
+
+The application checks if email is enabled at runtime using `isEmailServiceEnabled()` defined in `src/server/email/utils.ts`. Both environment variables must be set for the service to be active.
+
+### Provider Abstraction
+
+The provider is abstracted in `src/server/email/provider.ts` using a singleton pattern. This allows for easy replacement with another email provider by modifying the provider file.
+
+## Using Alternative Email Providers
+
+<Info>
+  While Resend is the default, you can integrate any email provider by modifying `src/server/email/provider.ts`.
+</Info>
+
+### Supported Alternatives
+
+<AccordionGroup>
+  <Accordion title="SendGrid" icon="paper-plane">
+    Popular email API with free tier.
+    
+    **Setup:**
+    1. Install: `npm install @sendgrid/mail`
+    2. Replace Resend in provider.ts
+    3. Update environment variables
+    
+    **Docs:** [sendgrid.com/docs](https://docs.sendgrid.com/)
+  </Accordion>
+  
+  <Accordion title="Mailgun" icon="envelope">
+    Powerful email API for developers.
+    
+    **Setup:**
+    1. Install: `npm install mailgun.js`
+    2. Replace Resend in provider.ts
+    3. Update environment variables
+    
+    **Docs:** [documentation.mailgun.com](https://documentation.mailgun.com/)
+  </Accordion>
+  
+  <Accordion title="AWS SES" icon="aws">
+    Scalable email service by Amazon.
+    
+    **Setup:**
+    1. Install: `npm install @aws-sdk/client-ses`
+    2. Replace Resend in provider.ts
+    3. Configure AWS credentials
+    
+    **Docs:** [docs.aws.amazon.com/ses](https://docs.aws.amazon.com/ses/)
+  </Accordion>
+  
+  <Accordion title="Postmark" icon="stamp">
+    Reliable transactional email.
+    
+    **Setup:**
+    1. Install: `npm install postmark`
+    2. Replace Resend in provider.ts
+    3. Update environment variables
+    
+    **Docs:** [postmarkapp.com/developer](https://postmarkapp.com/developer)
+  </Accordion>
+</AccordionGroup>
+
+### Implementation Steps
+
+1. Install the provider's SDK
+2. Update `src/server/email/provider.ts`:
+   ```typescript
+   import { YourEmailProvider } from 'your-provider-sdk'
+   
+   function getProvider() {
+     if (!_provider) {
+       _provider = new YourEmailProvider(env.EMAIL_PROVIDER_API_KEY)
+     }
+     return _provider
+   }
+   ```
+3. Update `src/server/email/service.ts` to match provider's API
+4. Test all email workflows
+
+## Troubleshooting
+
+### Emails Not Sending
+
+<AccordionGroup>
+  <Accordion title="Service Not Enabled" icon="circle-xmark">
+    **Error:** "Email service is not enabled"
+    
+    **Solution:** Verify both environment variables are set:
+    ```bash
+    echo $EMAIL_PROVIDER_API_KEY
+    echo $EMAIL_PROVIDER_FROM_EMAIL
+    ```
+    
+    Both must return non-empty values.
+  </Accordion>
+  
+  <Accordion title="Domain Not Verified" icon="ban">
+    **Error:** "Domain not verified" or "Forbidden"
+    
+    **Solutions:**
+    - Verify domain in Resend dashboard
+    - Check DNS records are properly configured
+    - Wait up to 48 hours for DNS propagation
+    - Use Resend's testing domain for development
+  </Accordion>
+  
+  <Accordion title="Invalid API Key" icon="key">
+    **Error:** "Invalid API key" or "Unauthorized"
+    
+    **Solutions:**
+    - Verify `EMAIL_PROVIDER_API_KEY` is correct
+    - Generate new API key in Resend dashboard
+    - Check for extra spaces or characters
+  </Accordion>
+  
+  <Accordion title="Invalid From Address" icon="at">
+    **Error:** "Invalid from address"
+    
+    **Solutions:**
+    - Ensure `EMAIL_PROVIDER_FROM_EMAIL` uses verified domain
+    - Format: `name@domain.com` (no spaces)
+    - Must match domain verified in Resend
+  </Accordion>
+  
+  <Accordion title="Rate Limit Exceeded" icon="clock">
+    **Error:** "Rate limit exceeded" or "Too many requests"
+    
+    **Solutions:**
+    - Check Resend rate limits (100/day on free tier)
+    - Upgrade to higher tier if needed
+    - Implement rate limiting in application
+  </Accordion>
+</AccordionGroup>
+
+### Testing Email Configuration
+
+Test your email setup:
+
+```bash
+# Test Resend API
+curl -X POST https://api.resend.com/emails \
+  -H "Authorization: Bearer $EMAIL_PROVIDER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "'$EMAIL_PROVIDER_FROM_EMAIL'",
+    "to": ["test@example.com"],
+    "subject": "Test Email",
+    "html": "<p>Test</p>"
+  }'
+```
+
+Expected response: JSON with `id` field.
+
+### Emails Going to Spam
+
+<Warning>
+  Configure SPF, DKIM, and DMARC records to improve email deliverability and prevent spam filtering.
+</Warning>
+
+**Solutions:**
+- Verify domain with email provider
+- Add SPF record: `v=spf1 include:resend.com ~all`
+- Configure DKIM (automatic with Resend)
+- Add DMARC policy: `v=DMARC1; p=quarantine`
+- Use a dedicated sending domain
+- Avoid spam trigger words
+
+## Development and Testing
+
+### Development Workflow
+
+For local development without email setup:
+
+1. Leave email variables empty
+2. Features requiring email will be disabled
+3. Users can still sign in with email/password
+4. OAuth sign-in works independently
+
+### Testing Emails Locally
+
+<Tabs>
+  <Tab title="Resend Test Mode">
+    Use Resend's onboarded domain for testing:
+    
+    ```bash
+    EMAIL_PROVIDER_FROM_EMAIL="onboarding@resend.dev"
+    ```
+    
+    Emails will be sent but won't deliver to recipients.
+  </Tab>
+  
+  <Tab title="Mailtrap">
+    Capture emails in development with [Mailtrap](https://mailtrap.io/):
+    
+    1. Requires custom provider implementation
+    2. All emails captured, none delivered
+    3. Inspect emails in Mailtrap dashboard
+  </Tab>
+  
+  <Tab title="Local SMTP Server">
+    Run local SMTP server for testing:
+    
+    ```bash
+    # Using MailHog
+    docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog
+    ```
+    
+    View emails at `http://localhost:8025`
+  </Tab>
+</Tabs>
+
+## Email Deliverability
+
+### Best Practices
+
+<Check>
+  Follow these guidelines for optimal email deliverability:
+</Check>
+
+1. **Verify domain** - Always verify your sending domain
+2. **Use dedicated domain** - Don't send from your main domain
+3. **Configure DNS** - Set up SPF, DKIM, and DMARC
+4. **Warm up domain** - Gradually increase sending volume
+5. **Monitor bounces** - Track and handle bounce rates
+6. **Clean subject lines** - Avoid spam trigger words
+7. **Include unsubscribe** - For non-transactional emails
+
+### DNS Configuration
+
+Required DNS records for Resend:
+
+```txt
+# SPF Record
+Type: TXT
+Name: @
+Value: v=spf1 include:resend.com ~all
+
+# DMARC Record
+Type: TXT
+Name: _dmarc
+Value: v=DMARC1; p=quarantine; rua=mailto:postmaster@yourdomain.com
+
+# MX Record (for bounce handling)
+Type: MX
+Name: @
+Value: feedback-smtp.resend.com
+Priority: 10
+```
+
+## Rate Limits and Pricing
+
+### Resend Pricing (as of 2024)
+
+| Plan | Price | Emails/Month | Features |
+| --- | --- | --- | --- |
+| **Free** | $0 | 3,000 | 100/day, 1 domain |
+| **Pro** | $20 | 50,000 | Unlimited domains, analytics |
+| **Business** | $80 | 200,000 | Priority support, SLA |
+
+<Info>
+  The free tier is sufficient for most small to medium deployments.
+</Info>
+
+## Privacy and Compliance
+
+### Data Handling
+
+- **Email content:** Sent to Resend via HTTPS
+- **User data:** Only email addresses sent to provider
+- **Retention:** Resend stores logs for 30 days
+- **GDPR:** Resend is GDPR compliant
+
+### User Privacy
+
+- All email links expire after 15 minutes
+- Tokens are single-use only
+- No tracking pixels in emails
+- Plain text alternative included
+
+## Related Configuration
+
+- [Authentication Configuration](/configuration/authentication) - Email verification and password reset
+- [Environment Variables](/configuration/environment-variables) - Complete environment reference

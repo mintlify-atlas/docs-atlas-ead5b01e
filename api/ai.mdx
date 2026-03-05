@@ -1,0 +1,49 @@
+---
+title: AI API
+description: API endpoints for AI-powered features
+---
+
+The AI API provides endpoints for AI-powered features and health checks.
+
+## health
+
+Check the health status of the AI service.
+
+```typescript
+await client.ai.health()
+```
+
+### Parameters
+
+No parameters required.
+
+### Response
+
+Returns the health status of the AI service.
+
+<ResponseField name="status" type="string">
+  Health status of the AI service
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Optional status message
+</ResponseField>
+
+## Usage Notes
+
+<Info>
+  This endpoint is public and does not require authentication.
+</Info>
+
+<Note>
+  The AI service is used for features like automatic transaction categorization. Additional AI endpoints may be added in future releases.
+</Note>
+
+## Example Response
+
+```json
+{
+  "status": "healthy",
+  "message": "AI service is operational"
+}
+```

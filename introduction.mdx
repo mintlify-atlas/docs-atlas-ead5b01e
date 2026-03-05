@@ -1,0 +1,84 @@
+---
+title: Introduction
+description: Welcome to Budgetron - a self-hosted personal budgeting application with AI-powered transaction categorization
+---
+
+# Welcome to Budgetron
+
+Budgetron is a full-featured personal budgeting app built with [Next.js](https://nextjs.org/), [Drizzle ORM](https://orm.drizzle.team/), and [PostgreSQL](https://www.postgresql.org/), designed to give you complete control over your financial data through self-hosting.
+
+<Note>
+  Budgetron is currently in **v0.1.0** - an early release that's production-ready but actively evolving.
+</Note>
+
+## What is Budgetron?
+
+Budgetron is a modern, self-hosted budgeting application that helps you track expenses, manage budgets, and gain insights into your spending patterns. Unlike cloud-based alternatives, Budgetron runs entirely on your own infrastructure, ensuring your financial data remains private and under your control.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Modern Architecture" icon="rocket">
+    Built with Next.js 14 App Router and TypeScript for a fast, responsive experience
+  </Card>
+  
+  <Card title="Secure Authentication" icon="lock">
+    Powered by BetterAuth with support for Google OAuth and custom OAuth providers
+  </Card>
+  
+  <Card title="AI-Powered Categorization" icon="brain">
+    Intelligent transaction categorization using local LLMs (Ollama) or OpenAI-compatible APIs
+  </Card>
+  
+  <Card title="Comprehensive Budgeting" icon="chart-bar">
+    Full-featured budgeting, reporting, and transaction insights to track your finances
+  </Card>
+  
+  <Card title="Self-Hosted & Private" icon="server">
+    Host on your own infrastructure - your data never leaves your control
+  </Card>
+  
+  <Card title="Docker Ready" icon="docker">
+    Fully containerized and production-ready with automated migrations
+  </Card>
+</CardGroup>
+
+## Tech Stack
+
+Budgetron is built with modern, battle-tested technologies:
+
+- **Frontend**: Next.js 14 (App Router), TypeScript, shadcn/ui + Tailwind CSS
+- **Backend**: Drizzle ORM, oRPC, PostgreSQL
+- **AI**: Local LLaMA 3 or OpenAI-compatible APIs (Ollama, OpenAI, Groq)
+- **Auth**: BetterAuth with OAuth support
+- **Infrastructure**: Docker, PostgreSQL
+- **Storage**: Optional Vercel Blob for file uploads
+- **Email**: Optional Resend integration for notifications
+
+## Why Self-Host?
+
+<AccordionGroup>
+  <Accordion title="Complete Privacy">
+    Your financial data is sensitive. With Budgetron, all your transactions, budgets, and reports stay on your own servers. No third-party access, no data mining, no privacy concerns.
+  </Accordion>
+  
+  <Accordion title="Full Control">
+    Customize, extend, and modify Budgetron to fit your exact needs. You're not locked into a vendor's feature set or pricing tiers.
+  </Accordion>
+  
+  <Accordion title="Local AI Processing">
+    Run AI-powered categorization entirely locally using Ollama and LLaMA 3, or use your preferred OpenAI-compatible provider. Your transaction data never needs to leave your infrastructure.
+  </Accordion>
+  
+  <Accordion title="Cost Effective">
+    Pay only for your hosting infrastructure. No per-user fees, no subscription tiers, no usage limits.
+  </Accordion>
+</AccordionGroup>
+
+## Getting Started
+
+Ready to take control of your budgeting? Follow our [Quickstart Guide](/quickstart) to get Budgetron running in minutes, or dive into the detailed [Installation Guide](/installation) for more deployment options.
+
+<Card title="Quickstart" icon="bolt" href="/quickstart">
+  Get Budgetron running with Docker in under 5 minutes
+</Card>
