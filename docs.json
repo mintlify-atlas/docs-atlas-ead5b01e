@@ -8,10 +8,6 @@
     "dark": "#94cb04"
   },
   "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
-  "logo": {
-    "light": "/logo.png",
-    "dark": "/logo.png"
-  },
   "navbar": {
     "primary": {
       "type": "github",
